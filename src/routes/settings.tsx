@@ -6,6 +6,7 @@ import { SettingsPreferences } from "@/components/settings/SettingsPreferences";
 import { SettingsHouseholds } from "@/components/settings/SettingsHouseholds";
 import { SettingsPrivacy } from "@/components/settings/SettingsPrivacy";
 import { SettingsAbout } from "@/components/settings/SettingsAbout";
+import { SettingsScanners } from "@/components/settings/SettingsScanners";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — Restock" }] }),
@@ -23,7 +24,7 @@ function SettingsPage() {
         <SettingsHouseholds />
         <SettingsPlaceholder title={t("settings.health")} />
         <SettingsPlaceholder title={t("settings.display")} />
-        <SettingsPlaceholder title={t("settings.scanners")} />
+        <SettingsScanners />
         <SettingsPlaceholder title={t("settings.submissions")} />
         <SettingsPlaceholder title={t("settings.ai")} />
         <SettingsPlaceholder title={t("settings.orders")} />
