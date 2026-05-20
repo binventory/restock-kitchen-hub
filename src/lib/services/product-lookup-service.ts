@@ -47,8 +47,8 @@ function rowToResolved(
   };
 }
 
-function offToInsert(off: OffProduct): Record<string, unknown> {
-  return { ...off, source: "openfoodfacts", is_approved: true, submitted_by_user_id: null };
+function offToInsert(off: OffProduct) {
+  return { ...off, source: "openfoodfacts" as const, is_approved: true, submitted_by_user_id: null };
 }
 
 export async function lookupBarcode(

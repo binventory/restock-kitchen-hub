@@ -98,7 +98,7 @@ export async function addToInventory(
       user_product_id: ref.user_product_id ?? null,
       quantity,
       limit_threshold: limit,
-      unit,
+      unit: unit as "pieces",
     })
     .select("id")
     .single();
