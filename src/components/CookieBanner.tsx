@@ -21,13 +21,16 @@ export function CookieBanner() {
   const persist = async (a: boolean, m: boolean) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ essential: true, analytics: a, marketing: m, at: Date.now() }));
     try {
-      await supabase.from("cookie_consents").insert({
-        user_id: user?.id ?? null,
-        anonymous_id: user ? null : crypto.randomUUID(),
-        essential: true,
-        analytics: a,
-        marketing: m,
-      });
+      await supabase.from("cookie_consents").upsert(
+        {
+          user_id: user?.id ?? null,
+          anonymous_id: user ? null : crypto.randomUUID(),
+          essential: true,
+          analytics: a,
+          marketing: m,
+        },
+        { onConflict: "user_id" },
+      );
     } catch {
       /* ignore */
     }
