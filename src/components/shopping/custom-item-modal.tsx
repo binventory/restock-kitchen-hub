@@ -18,8 +18,7 @@ export function CustomItemModal({ householdId, userId, onSaved }: Props) {
     const path = `${userId}/${crypto.randomUUID()}.jpg`;
     const { error } = await supabase.storage.from("shopping-photos").upload(path, file);
     if (error) return toast.error("Upload failed");
-    const { data } = supabase.storage.from("shopping-photos").createSignedUrl(path, 60 * 60 * 24 * 30);
-    const signed = await data;
+    const signed = await supabase.storage.from("shopping-photos").createSignedUrl(path, 60 * 60 * 24 * 30);
     setPhotoUrl(signed.data?.signedUrl ?? null);
   };
 

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Flashlight, Keyboard } from "lucide-react";
-import { BrowserMultiFormatReader } from "@zxing/library/esm/browser/BrowserMultiFormatReader";
-import { BarcodeFormat, DecodeHintType } from "@zxing/library";
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType, type Result } from "@zxing/library";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -42,14 +41,15 @@ export function ScannerModal({ onScan, onClose }: Props) {
           await videoRef.current.play();
         }
         setLoading(false);
-        await reader.decodeFromVideoElement(videoRef.current!, (result) => {
+        const cb = (result: Result | null) => {
           if (result) {
             navigator.vibrate?.(100);
             setFlash(true);
             reader.reset();
             setTimeout(() => onScan(result.getText()), 200);
           }
-        });
+        };
+        await reader.decodeFromVideoDevice(null, videoRef.current!, cb);
       } catch {
         localStorage.setItem("restock_camera_permission", "denied");
         setLoading(false);
@@ -61,7 +61,7 @@ export function ScannerModal({ onScan, onClose }: Props) {
     return () => {
       clearTimeout(t);
       reader.reset();
-      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current?.getTracks().forEach((tr) => tr.stop());
     };
   }, [onScan]);
 
@@ -69,7 +69,9 @@ export function ScannerModal({ onScan, onClose }: Props) {
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
     try {
-      await track.applyConstraints({ advanced: [{ torch: !torchOn } as MediaTrackConstraintSet] });
+      await track.applyConstraints({
+        advanced: [{ torch: !torchOn } as unknown as MediaTrackConstraintSet],
+      });
       setTorchOn(!torchOn);
     } catch {
       // not supported
