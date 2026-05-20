@@ -5,12 +5,23 @@ import { useTranslation } from "react-i18next";
 export function AuthScreen() {
   const { t } = useTranslation();
   const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const signIn = async (provider: "google" | "apple") => {
     setBusy(provider);
-    const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
-    if (result.error || result.redirected) return;
-    setBusy(null);
+    setError(null);
+    try {
+      const result = (await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin })) as { redirected?: boolean; error?: unknown };
+      if (result.redirected) return;
+      if (result.error) {
+        const msg = result.error instanceof Error ? result.error.message : String(result.error);
+        setError(msg || "Sign-in failed. Please try again.");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
+    } finally {
+      setBusy(null);
+    }
   };
 
   return (
@@ -35,6 +46,11 @@ export function AuthScreen() {
             {busy === "apple" ? "..." : t("auth.continueApple")}
           </button>
         </div>
+        {error && (
+          <p className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   );
