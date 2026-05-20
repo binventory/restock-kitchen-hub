@@ -9,12 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as ShoppingRouteImport } from './routes/shopping'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as OpenfoodfactsAttributionRouteImport } from './routes/openfoodfacts-attribution'
 import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as ImpressumRouteImport } from './routes/impressum'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CookRouteImport } from './routes/cook'
 import { Route as IndexRouteImport } from './routes/index'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShoppingRoute = ShoppingRouteImport.update({
   id: '/shopping',
   path: '/shopping',
@@ -25,9 +35,30 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OpenfoodfactsAttributionRoute =
+  OpenfoodfactsAttributionRouteImport.update({
+    id: '/openfoodfacts-attribution',
+    path: '/openfoodfacts-attribution',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const InventoryRoute = InventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ImpressumRoute = ImpressumRouteImport.update({
+  id: '/impressum',
+  path: '/impressum',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CookRoute = CookRouteImport.update({
@@ -44,43 +75,101 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/cook': typeof CookRoute
+  '/cookies': typeof CookiesRoute
+  '/impressum': typeof ImpressumRoute
   '/inventory': typeof InventoryRoute
+  '/openfoodfacts-attribution': typeof OpenfoodfactsAttributionRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cook': typeof CookRoute
+  '/cookies': typeof CookiesRoute
+  '/impressum': typeof ImpressumRoute
   '/inventory': typeof InventoryRoute
+  '/openfoodfacts-attribution': typeof OpenfoodfactsAttributionRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/cook': typeof CookRoute
+  '/cookies': typeof CookiesRoute
+  '/impressum': typeof ImpressumRoute
   '/inventory': typeof InventoryRoute
+  '/openfoodfacts-attribution': typeof OpenfoodfactsAttributionRoute
+  '/privacy': typeof PrivacyRoute
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
+  '/terms': typeof TermsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cook' | '/inventory' | '/settings' | '/shopping'
+  fullPaths:
+    | '/'
+    | '/cook'
+    | '/cookies'
+    | '/impressum'
+    | '/inventory'
+    | '/openfoodfacts-attribution'
+    | '/privacy'
+    | '/settings'
+    | '/shopping'
+    | '/terms'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cook' | '/inventory' | '/settings' | '/shopping'
-  id: '__root__' | '/' | '/cook' | '/inventory' | '/settings' | '/shopping'
+  to:
+    | '/'
+    | '/cook'
+    | '/cookies'
+    | '/impressum'
+    | '/inventory'
+    | '/openfoodfacts-attribution'
+    | '/privacy'
+    | '/settings'
+    | '/shopping'
+    | '/terms'
+  id:
+    | '__root__'
+    | '/'
+    | '/cook'
+    | '/cookies'
+    | '/impressum'
+    | '/inventory'
+    | '/openfoodfacts-attribution'
+    | '/privacy'
+    | '/settings'
+    | '/shopping'
+    | '/terms'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CookRoute: typeof CookRoute
+  CookiesRoute: typeof CookiesRoute
+  ImpressumRoute: typeof ImpressumRoute
   InventoryRoute: typeof InventoryRoute
+  OpenfoodfactsAttributionRoute: typeof OpenfoodfactsAttributionRoute
+  PrivacyRoute: typeof PrivacyRoute
   SettingsRoute: typeof SettingsRoute
   ShoppingRoute: typeof ShoppingRoute
+  TermsRoute: typeof TermsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shopping': {
       id: '/shopping'
       path: '/shopping'
@@ -95,11 +184,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/openfoodfacts-attribution': {
+      id: '/openfoodfacts-attribution'
+      path: '/openfoodfacts-attribution'
+      fullPath: '/openfoodfacts-attribution'
+      preLoaderRoute: typeof OpenfoodfactsAttributionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inventory': {
       id: '/inventory'
       path: '/inventory'
       fullPath: '/inventory'
       preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/impressum': {
+      id: '/impressum'
+      path: '/impressum'
+      fullPath: '/impressum'
+      preLoaderRoute: typeof ImpressumRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cook': {
@@ -122,9 +239,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CookRoute: CookRoute,
+  CookiesRoute: CookiesRoute,
+  ImpressumRoute: ImpressumRoute,
   InventoryRoute: InventoryRoute,
+  OpenfoodfactsAttributionRoute: OpenfoodfactsAttributionRoute,
+  PrivacyRoute: PrivacyRoute,
   SettingsRoute: SettingsRoute,
   ShoppingRoute: ShoppingRoute,
+  TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
