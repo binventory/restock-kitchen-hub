@@ -1,0 +1,40 @@
+{
+  "common": {
+    "save": "Speichern", "cancel": "Abbrechen", "delete": "Löschen", "edit": "Bearbeiten",
+    "loading": "Lädt...", "error": "Etwas ist schiefgelaufen", "retry": "Erneut versuchen",
+    "back": "Zurück", "close": "Schließen", "continue": "Weiter", "yes": "Ja", "no": "Nein",
+    "signOut": "Abmelden", "signIn": "Anmelden", "signUp": "Registrieren"
+  },
+  "app": { "name": "Restock", "tagline": "Deine Küche, smarter." },
+  "nav": { "inventory": "Vorrat", "shopping": "Einkauf", "cook": "Kochen", "settings": "Einstellungen" },
+  "inventory": { "title": "Vorrat", "empty": "Dein Vorrat ist leer. Scanne ein Produkt, um zu starten.", "lowStock": "Niedriger Bestand" },
+  "shopping": { "title": "Einkaufsliste", "empty": "Noch nichts zu kaufen." },
+  "cook": { "title": "Kochen", "empty": "KI-Rezeptideen kommen bald." },
+  "settings": {
+    "title": "Einstellungen",
+    "profile": "Mein Profil", "preferences": "Präferenzen", "households": "Meine Haushalte",
+    "health": "Gesundheitsprofil", "display": "Produktanzeige", "scanners": "Scanner",
+    "submissions": "Meine eingereichten Produkte", "ai": "KI-Assistent", "orders": "Meine Bestellungen",
+    "subscription": "Abonnement", "privacy": "Datenschutz & Daten", "about": "Über",
+    "theme": "Design", "themeLight": "Hell", "themeDark": "Dunkel", "themeSystem": "System",
+    "language": "Sprache",
+    "notifications": "Benachrichtigungen", "exportData": "Daten exportieren", "deleteAccount": "Konto löschen",
+    "deleteConfirm": "Gib DELETE ein zur Bestätigung",
+    "support": "Support", "version": "Version", "social": "Folge uns"
+  },
+  "auth": { "welcome": "Willkommen bei Restock", "subtitle": "Deine Küche, smarter.",
+    "continueGoogle": "Mit Google fortfahren", "continueApple": "Mit Apple fortfahren" },
+  "onboarding": {
+    "title": "Richte deine Küche ein",
+    "createHousehold": "Neuen Haushalt erstellen", "joinHousehold": "Mit Einladung beitreten",
+    "householdName": "Haushaltsname", "inviteToken": "Einladungscode",
+    "create": "Erstellen", "join": "Beitreten"
+  },
+  "household": { "default": "Standard", "setDefault": "Als Standard", "invite": "Mitglied einladen", "leave": "Verlassen" },
+  "cookies": { "title": "Wir verwenden Cookies",
+    "body": "Essenzielle Cookies sind nötig. Mit deiner Zustimmung nutzen wir auch Analyse- und Marketing-Cookies.",
+    "acceptAll": "Alle akzeptieren", "rejectAll": "Nicht-essenzielle ablehnen", "customize": "Anpassen",
+    "essential": "Essenziell", "analytics": "Analyse", "marketing": "Marketing" },
+  "legal": { "privacy": "Datenschutz", "terms": "AGB", "impressum": "Impressum", "cookiesPolicy": "Cookies", "off": "OpenFoodFacts-Attribution" },
+  "maintenance": { "title": "Wartungsarbeiten", "body": "Wir sind gleich zurück." }
+}

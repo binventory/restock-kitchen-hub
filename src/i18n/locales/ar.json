@@ -1,0 +1,40 @@
+{
+  "common": {
+    "save": "حفظ", "cancel": "إلغاء", "delete": "حذف", "edit": "تعديل",
+    "loading": "جارٍ التحميل...", "error": "حدث خطأ", "retry": "أعد المحاولة",
+    "back": "رجوع", "close": "إغلاق", "continue": "متابعة", "yes": "نعم", "no": "لا",
+    "signOut": "تسجيل الخروج", "signIn": "تسجيل الدخول", "signUp": "إنشاء حساب"
+  },
+  "app": { "name": "ريستوك", "tagline": "مطبخك، أذكى." },
+  "nav": { "inventory": "المخزون", "shopping": "التسوق", "cook": "طبخ", "settings": "الإعدادات" },
+  "inventory": { "title": "المخزون", "empty": "مخزنك فارغ. امسح منتجاً للبدء.", "lowStock": "مخزون منخفض" },
+  "shopping": { "title": "قائمة التسوق", "empty": "لا شيء للشراء بعد." },
+  "cook": { "title": "طبخ", "empty": "أفكار وصفات بالذكاء الاصطناعي قريباً." },
+  "settings": {
+    "title": "الإعدادات",
+    "profile": "ملفي", "preferences": "التفضيلات", "households": "منازلي",
+    "health": "الملف الصحي", "display": "عرض المنتج", "scanners": "الماسحات",
+    "submissions": "منتجاتي المقدمة", "ai": "مساعد الذكاء الاصطناعي", "orders": "طلباتي",
+    "subscription": "الاشتراك", "privacy": "الخصوصية والبيانات", "about": "حول",
+    "theme": "المظهر", "themeLight": "فاتح", "themeDark": "داكن", "themeSystem": "النظام",
+    "language": "اللغة",
+    "notifications": "الإشعارات", "exportData": "تصدير بياناتي", "deleteAccount": "حذف حسابي",
+    "deleteConfirm": "اكتب DELETE للتأكيد",
+    "support": "الدعم", "version": "الإصدار", "social": "تابعنا"
+  },
+  "auth": { "welcome": "مرحباً بك في ريستوك", "subtitle": "مطبخك، أذكى.",
+    "continueGoogle": "المتابعة باستخدام Google", "continueApple": "المتابعة باستخدام Apple" },
+  "onboarding": {
+    "title": "إعداد مطبخك",
+    "createHousehold": "إنشاء منزل جديد", "joinHousehold": "الانضمام برمز دعوة",
+    "householdName": "اسم المنزل", "inviteToken": "رمز الدعوة",
+    "create": "إنشاء", "join": "انضمام"
+  },
+  "household": { "default": "الافتراضي", "setDefault": "تعيين كافتراضي", "invite": "دعوة عضو", "leave": "مغادرة" },
+  "cookies": { "title": "نستخدم ملفات تعريف الارتباط",
+    "body": "ملفات تعريف الارتباط الأساسية ضرورية لعمل ريستوك. بموافقتك، نستخدم أيضاً ملفات للتحليلات والتسويق.",
+    "acceptAll": "قبول الكل", "rejectAll": "رفض غير الأساسي", "customize": "تخصيص",
+    "essential": "أساسي", "analytics": "تحليلات", "marketing": "تسويق" },
+  "legal": { "privacy": "الخصوصية", "terms": "الشروط", "impressum": "Impressum", "cookiesPolicy": "ملفات تعريف الارتباط", "off": "إسناد OpenFoodFacts" },
+  "maintenance": { "title": "صيانة", "body": "سنعود قريباً." }
+}
