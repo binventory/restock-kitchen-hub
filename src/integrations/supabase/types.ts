@@ -1812,7 +1812,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_invite: { Args: { _token: string }; Returns: string }
+      cancel_own_order: { Args: { _order_id: string }; Returns: undefined }
+      create_household: { Args: { _name: string }; Returns: string }
+      delete_my_account: { Args: never; Returns: undefined }
+      get_admin_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["admin_role"]
+      }
+      has_admin_permission: {
+        Args: { _permission: string; _user_id: string }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_household_member: {
+        Args: { _household_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_household_owner: {
+        Args: { _household_id: string; _user_id: string }
+        Returns: boolean
+      }
+      request_data_export: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
       admin_role: "super_admin" | "moderator" | "support"
