@@ -11,10 +11,11 @@ export function AuthScreen() {
     setBusy(provider);
     setError(null);
     try {
-      const result = await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin });
+      const result = (await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin })) as { redirected?: boolean; error?: unknown };
       if (result.redirected) return;
       if (result.error) {
-        setError(typeof result.error === "string" ? result.error : "Sign-in failed. Please try again.");
+        const msg = result.error instanceof Error ? result.error.message : String(result.error);
+        setError(msg || "Sign-in failed. Please try again.");
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
