@@ -108,22 +108,17 @@ export async function lookupBarcode(
     if (up) return rowToResolved(up, "user", "user_products");
   }
 
-  // Step 4: OpenFoodFacts
+  // Step 4: OpenFoodFacts (ingest server-side to avoid client self-approval)
+  const ingest = await ingestOpenFoodFactsProduct({ data: { barcode } });
+  if (ingest?.product) {
+    return rowToResolved(
+      ingest.product as unknown as Record<string, unknown>,
+      "global",
+      "products",
+    );
+  }
   const off = await fetchFromOpenFoodFacts(barcode);
   if (off) {
-    const { data: inserted } = await supabase
-      .from("products")
-      .insert(offToInsert(off))
-      .select("*")
-      .single();
-    if (inserted) return rowToResolved(inserted, "global", "products");
-    const { data: existing } = await supabase
-      .from("products")
-      .select("*")
-      .eq("barcode", barcode)
-      .eq("is_approved", true)
-      .maybeSingle();
-    if (existing) return rowToResolved(existing, "global", "products");
     return {
       id: `off_${barcode}`,
       type: "global" as const,
