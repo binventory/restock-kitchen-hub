@@ -1,272 +1,140 @@
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useRef } from "react";
+import { Minus, Plus, Trash2 } from "lucide-react";
+import type { InventoryItem } from "@/lib/services/inventory-service";
+import { updateQuantity, removeFromInventory, fetchFullProduct } from "@/lib/services/inventory-service";
 import type { ResolvedProduct } from "@/lib/types/product";
 
-export interface InventoryItem {
-  id: string;
-  household_id: string;
-  product_id: string | null;
-  user_product_id: string | null;
-  section_id: string | null;
-  product_group_id: string | null;
-  quantity: number;
-  limit_threshold: number;
-  unit: string;
-  expiry_date: string | null;
-  product: {
-    id: string;
-    name: string;
-    brand: string | null;
-    image_url: string | null;
-    barcode: string | null;
-  } | null;
+interface Props {
+  item: InventoryItem;
+  onSelect: (p: ResolvedProduct) => void;
+  onDeleted?: () => void;
 }
 
-interface Opts {
-  search?: string;
-  filter?: "all" | "low" | "out";
-  sort?: "name" | "qty_asc" | "low_first";
-  limit?: number;
-  offset?: number;
-}
+const SWIPE_THRESHOLD = 80;
 
-export async function getInventory(householdId: string, opts: Opts = {}): Promise<InventoryItem[]> {
-  const { limit = 20, offset = 0, filter = "all", sort = "name", search = "" } = opts;
-  let q = supabase
-    .from("inventory")
-    .select(
-      "id, household_id, product_id, user_product_id, section_id, product_group_id, quantity, limit_threshold, unit, expiry_date, products(id, name, brand, image_url, barcode), user_products(id, name, brand, image_url, barcode)",
-    )
-    .eq("household_id", householdId);
+export function ItemCard({ item, onSelect, onDeleted }: Props) {
+  const [qty, setQty] = useState(item.quantity);
+  const [offset, setOffset] = useState(0);
+  const [confirming, setConfirming] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const startX = useRef(0);
+  const swiping = useRef(false);
 
-  if (filter === "out") q = q.eq("quantity", 0);
-  if (sort === "name") q = q.order("created_at", { ascending: true });
-  else if (sort === "qty_asc") q = q.order("quantity", { ascending: true });
-  q = q.range(offset, offset + limit - 1);
-
-  const { data, error } = await q;
-  if (error || !data) return [];
-
-  let items: InventoryItem[] = data.map((r) => {
-    const prod = (r.products as InventoryItem["product"]) ?? (r.user_products as InventoryItem["product"]);
-    return {
-      id: r.id,
-      household_id: r.household_id,
-      product_id: r.product_id,
-      user_product_id: r.user_product_id,
-      section_id: r.section_id,
-      product_group_id: r.product_group_id,
-      quantity: Number(r.quantity),
-      limit_threshold: Number(r.limit_threshold),
-      unit: r.unit,
-      expiry_date: r.expiry_date,
-      product: prod,
-    };
-  });
-
-  if (search) {
-    const s = search.toLowerCase();
-    items = items.filter(
-      (i) => i.product?.name.toLowerCase().includes(s) || (i.product?.brand ?? "").toLowerCase().includes(s),
-    );
-  }
-  if (filter === "low") items = items.filter((i) => i.quantity <= i.limit_threshold && i.quantity > 0);
-  if (sort === "low_first") items.sort((a, b) => a.quantity - a.limit_threshold - (b.quantity - b.limit_threshold));
-  if (sort === "name") items.sort((a, b) => (a.product?.name ?? "").localeCompare(b.product?.name ?? ""));
-  return items;
-}
-
-/**
- * Fetch the full product row (all nutrition, allergen, halal fields)
- * from products or user_products. Used when opening Product Page
- * from Stock or Shopping list (where we only had partial data).
- */
-export async function fetchFullProduct(
-  productId: string | null,
-  userProductId: string | null,
-): Promise<ResolvedProduct | null> {
-  const table = productId ? "products" : "user_products";
-  const id = productId ?? userProductId;
-  if (!id) return null;
-
-  const { data, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
-  if (error || !data) return null;
-
-  // products table has all nutrition fields, user_products has fewer
-  return {
-    id: String(data.id),
-    type: productId ? "global" : "user",
-    tableSource: productId ? "products" : "user_products",
-    barcode: (data.barcode as string) ?? "",
-    name: (data.name as string) ?? "—",
-    brand: (data.brand as string | null) ?? null,
-    generic_name: (data.generic_name as string | null) ?? null,
-    category: (data.category as string | null) ?? null,
-    image_url: (data.image_url as string | null) ?? null,
-    quantity_value: (data.quantity_value as number | null) ?? null,
-    quantity_unit: (data.quantity_unit as string | null) ?? null,
-    calories_100g: (data.calories_100g as number | null) ?? null,
-    fat_100g: (data.fat_100g as number | null) ?? null,
-    saturated_fat_100g: (data.saturated_fat_100g as number | null) ?? null,
-    carbohydrates_100g: (data.carbohydrates_100g as number | null) ?? null,
-    sugars_100g: (data.sugars_100g as number | null) ?? null,
-    proteins_100g: (data.proteins_100g as number | null) ?? null,
-    salt_100g: (data.salt_100g as number | null) ?? null,
-    fiber_100g: (data.fiber_100g as number | null) ?? null,
-    serving_size_g: (data.serving_size_g as number | null) ?? null,
-    calories_serving: (data.calories_serving as number | null) ?? null,
-    nutriscore: (data.nutriscore as ResolvedProduct["nutriscore"]) ?? null,
-    ecoscore: (data.ecoscore as ResolvedProduct["ecoscore"]) ?? null,
-    nova_group: (data.nova_group as ResolvedProduct["nova_group"]) ?? null,
-    nutrient_levels: (data.nutrient_levels as Record<string, string> | null) ?? null,
-    allergens: (data.allergens as string[] | null) ?? [],
-    traces_allergens: (data.traces_allergens as string[] | null) ?? [],
-    labels: (data.labels as string[] | null) ?? [],
-    is_vegan: (data.is_vegan as boolean | null) ?? null,
-    is_vegetarian: (data.is_vegetarian as boolean | null) ?? null,
-    is_gluten_free: (data.is_gluten_free as boolean | null) ?? null,
-    has_palm_oil: (data.has_palm_oil as boolean | null) ?? null,
-    halal_certified: (data.halal_certified as boolean | null) ?? null,
-    ingredients_text: (data.ingredients_text as string | null) ?? null,
-    ingredients_analysis: (data.ingredients_analysis as string[] | null) ?? [],
-    available_stores: (data.available_stores as string[] | null) ?? [],
+  const change = (delta: number) => {
+    const next = Math.max(0, qty + delta);
+    setQty(next);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => void updateQuantity(item.id, next), 500);
   };
-}
 
-/**
- * Match product name to a product_group via its keywords.
- * Used to auto-categorize inventory items.
- */
-async function autoDetectGroup(
-  productName: string,
-): Promise<{ section_id: string | null; product_group_id: string | null }> {
-  const lower = productName.toLowerCase();
-  const { data: groups } = await supabase.from("product_groups").select("id, section_id, keywords");
-  if (!groups) return { section_id: null, product_group_id: null };
-  for (const g of groups) {
-    const kw = (g.keywords as string[] | null) ?? [];
-    if (kw.some((k) => lower.includes(k.toLowerCase()))) {
-      return {
-        section_id: (g.section_id as string | null) ?? null,
-        product_group_id: (g.id as string) ?? null,
-      };
+  const openProduct = async () => {
+    if (offset !== 0) return;
+    const full = await fetchFullProduct(item.product_id, item.user_product_id);
+    if (full) onSelect(full);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    swiping.current = true;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!swiping.current) return;
+    const dx = e.touches[0].clientX - startX.current;
+    setOffset(Math.min(0, Math.max(-120, dx)));
+  };
+
+  const onTouchEnd = () => {
+    swiping.current = false;
+    if (offset <= -SWIPE_THRESHOLD) {
+      setOffset(-120);
+      setConfirming(true);
+    } else {
+      setOffset(0);
     }
-  }
-  return { section_id: null, product_group_id: null };
-}
+  };
 
-/**
- * Update inventory quantity. If new quantity drops to or below the
- * limit_threshold, automatically add the product to the household's
- * shopping list (unless it's already on the list unchecked).
- */
-export async function updateQuantity(itemId: string, newQty: number): Promise<void> {
-  const safe = Math.max(0, newQty);
+  const confirmDelete = async () => {
+    await removeFromInventory(item.id);
+    setConfirming(false);
+    onDeleted?.();
+  };
 
-  // Read the current row to know household, product, and limit
-  const { data: row } = await supabase
-    .from("inventory")
-    .select("household_id, product_id, user_product_id, limit_threshold, quantity")
-    .eq("id", itemId)
-    .maybeSingle();
+  const cancelDelete = () => {
+    setOffset(0);
+    setConfirming(false);
+  };
 
-  await supabase.from("inventory").update({ quantity: safe }).eq("id", itemId);
+  const isOut = qty === 0;
+  const isLow = qty > 0 && qty <= item.limit_threshold;
 
-  if (!row) return;
-  const limit = Number(row.limit_threshold);
-  const wasAbove = Number(row.quantity) > limit;
-  const nowBelow = safe <= limit;
+  return (
+    <div className="relative overflow-hidden rounded-xl">
+      {/* Red delete background revealed by swipe */}
+      <div className="absolute inset-y-0 right-0 flex items-center justify-end bg-red-500 px-4 gap-2">
+        {confirming ? (
+          <>
+            <button onClick={cancelDelete} className="text-xs text-white bg-black/30 px-2 py-1 rounded">
+              Cancel
+            </button>
+            <button
+              onClick={() => void confirmDelete()}
+              className="text-xs text-white bg-white/20 px-2 py-1 rounded font-semibold"
+            >
+              Delete
+            </button>
+          </>
+        ) : (
+          <Trash2 className="h-5 w-5 text-white" />
+        )}
+      </div>
 
-  // Only trigger auto-add when quantity CROSSES the limit going down
-  if (!wasAbove || !nowBelow) return;
-
-  // Check if not already on shopping list (unchecked)
-  const col = row.product_id ? "product_id" : "user_product_id";
-  const refId = row.product_id ?? row.user_product_id;
-  if (!refId) return;
-
-  const { data: existing } = await supabase
-    .from("shopping_list")
-    .select("id")
-    .eq("household_id", row.household_id)
-    .eq("is_checked", false)
-    .eq(col, refId)
-    .maybeSingle();
-
-  if (existing) return; // Already there
-
-  // Auto-add to shopping list
-  await supabase.from("shopping_list").insert({
-    household_id: row.household_id,
-    [col]: refId,
-    needed_quantity: 1,
-    added_automatically: true,
-  });
-}
-
-/**
- * Add product to inventory. Auto-detects section/group from product name.
- * If already in inventory, increments quantity instead of duplicating.
- */
-export async function addToInventory(
-  householdId: string,
-  ref: { product_id?: string; user_product_id?: string },
-  quantity: number,
-  limit: number,
-  unit: string,
-  productName?: string,
-): Promise<string | null> {
-  if (ref.product_id && ref.product_id.startsWith("off_")) return null;
-  if (ref.user_product_id && ref.user_product_id.startsWith("off_")) return null;
-
-  const col = ref.product_id ? "product_id" : "user_product_id";
-  const refId = ref.product_id ?? ref.user_product_id;
-  if (!refId) return null;
-
-  // Check if already in inventory
-  const { data: existing } = await supabase
-    .from("inventory")
-    .select("id, quantity")
-    .eq("household_id", householdId)
-    .eq(col, refId)
-    .maybeSingle();
-
-  if (existing) {
-    const newQty = Number(existing.quantity) + quantity;
-    await supabase.from("inventory").update({ quantity: newQty }).eq("id", existing.id);
-    return existing.id;
-  }
-
-  // Auto-detect section + group from product name
-  let section_id: string | null = null;
-  let product_group_id: string | null = null;
-  if (productName) {
-    const detected = await autoDetectGroup(productName);
-    section_id = detected.section_id;
-    product_group_id = detected.product_group_id;
-  }
-
-  const { data } = await supabase
-    .from("inventory")
-    .insert({
-      household_id: householdId,
-      product_id: ref.product_id ?? null,
-      user_product_id: ref.user_product_id ?? null,
-      quantity,
-      limit_threshold: limit,
-      unit: unit as "pieces",
-      section_id,
-      product_group_id,
-    })
-    .select("id")
-    .single();
-  return data?.id ?? null;
-}
-
-export async function removeFromInventory(itemId: string): Promise<void> {
-  await supabase.from("inventory").delete().eq("id", itemId);
-}
-
-export async function getLowStockItems(householdId: string): Promise<InventoryItem[]> {
-  const all = await getInventory(householdId, { limit: 200 });
-  return all.filter((i) => i.quantity <= i.limit_threshold);
+      {/* Foreground card */}
+      <div
+        onClick={() => void openProduct()}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ transform: `translateX(${offset}px)` }}
+        className="flex items-center gap-3 rounded-xl border bg-card p-3 cursor-pointer hover:bg-accent/30 transition-transform"
+      >
+        <div className="h-10 w-10 rounded-md bg-muted overflow-hidden flex-shrink-0">
+          {item.product?.image_url && (
+            <img src={item.product.image_url} alt="" className="h-full w-full object-cover" />
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold truncate text-sm">{item.product?.name ?? "—"}</p>
+          {item.product?.brand && <p className="text-xs text-muted-foreground truncate">{item.product.brand}</p>}
+          <div className="flex gap-1 mt-1">
+            {isOut && (
+              <span className="text-[10px] bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1.5 py-0.5 rounded">
+                Out
+              </span>
+            )}
+            {isLow && (
+              <span className="text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 px-1.5 py-0.5 rounded">
+                Low
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => change(-1)}
+            className="h-8 w-8 grid place-items-center rounded-full bg-muted hover:bg-muted-foreground/20"
+          >
+            <Minus className="h-3 w-3" />
+          </button>
+          <span className="min-w-[2ch] text-center text-sm font-medium">{qty}</span>
+          <button
+            onClick={() => change(1)}
+            className="h-8 w-8 grid place-items-center rounded-full bg-primary text-primary-foreground"
+          >
+            <Plus className="h-3 w-3" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
