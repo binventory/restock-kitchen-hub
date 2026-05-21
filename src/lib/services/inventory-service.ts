@@ -30,6 +30,7 @@ interface Opts {
 
 export async function getInventory(householdId: string, opts: Opts = {}): Promise<InventoryItem[]> {
   const { limit = 20, offset = 0, filter = "all", sort = "name", search = "" } = opts;
+
   let q = supabase
     .from("inventory")
     .select(
@@ -67,22 +68,27 @@ export async function getInventory(householdId: string, opts: Opts = {}): Promis
   if (search) {
     const s = search.toLowerCase();
     items = items.filter(
-      (i) =>
-        i.product?.name.toLowerCase().includes(s) ||
-        (i.product?.brand ?? "").toLowerCase().includes(s),
+      (i) => i.product?.name.toLowerCase().includes(s) || (i.product?.brand ?? "").toLowerCase().includes(s),
     );
   }
   if (filter === "low") items = items.filter((i) => i.quantity <= i.limit_threshold && i.quantity > 0);
-  if (sort === "low_first")
-    items.sort((a, b) => a.quantity - a.limit_threshold - (b.quantity - b.limit_threshold));
+  if (sort === "low_first") items.sort((a, b) => a.quantity - a.limit_threshold - (b.quantity - b.limit_threshold));
   if (sort === "name") items.sort((a, b) => (a.product?.name ?? "").localeCompare(b.product?.name ?? ""));
   return items;
 }
 
 export async function updateQuantity(itemId: string, newQty: number): Promise<void> {
-  await supabase.from("inventory").update({ quantity: Math.max(0, newQty) }).eq("id", itemId);
+  await supabase
+    .from("inventory")
+    .update({ quantity: Math.max(0, newQty) })
+    .eq("id", itemId);
 }
 
+/**
+ * Add product to inventory. If the product is already in inventory
+ * (same household + same product/user_product), increment the
+ * quantity instead of creating a duplicate row.
+ */
 export async function addToInventory(
   householdId: string,
   ref: { product_id?: string; user_product_id?: string },
@@ -90,6 +96,31 @@ export async function addToInventory(
   limit: number,
   unit: string,
 ): Promise<string | null> {
+  // Reject temporary "off_" IDs that are not valid UUIDs.
+  // Caller must first save product to user_products to get a real UUID.
+  if (ref.product_id && ref.product_id.startsWith("off_")) return null;
+  if (ref.user_product_id && ref.user_product_id.startsWith("off_")) return null;
+
+  // First check if a row already exists for this product
+  const col = ref.product_id ? "product_id" : "user_product_id";
+  const refId = ref.product_id ?? ref.user_product_id;
+  if (!refId) return null;
+
+  const { data: existing } = await supabase
+    .from("inventory")
+    .select("id, quantity")
+    .eq("household_id", householdId)
+    .eq(col, refId)
+    .maybeSingle();
+
+  if (existing) {
+    // Already in inventory — increment quantity, keep existing limit/unit
+    const newQty = Number(existing.quantity) + quantity;
+    await supabase.from("inventory").update({ quantity: newQty }).eq("id", existing.id);
+    return existing.id;
+  }
+
+  // Not in inventory yet — insert a new row
   const { data } = await supabase
     .from("inventory")
     .insert({
