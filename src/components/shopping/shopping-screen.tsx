@@ -29,6 +29,7 @@ export function ShoppingScreen() {
   const [showDone, setShowDone] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  const [selectedProduct, setSelectedProduct] = useState<ResolvedProduct | null>(null);
 
   const load = useCallback(async () => {
     if (!current) return;
@@ -66,7 +67,12 @@ export function ShoppingScreen() {
       .channel(`household:${current.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "shopping_list", filter: `household_id=eq.${current.id}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "shopping_list",
+          filter: `household_id=eq.${current.id}`,
+        },
         () => {
           void load();
         },
@@ -98,6 +104,7 @@ export function ShoppingScreen() {
             bought,
             1,
             "pieces",
+            item.product?.name,
           );
       }
       toast.success("✅ Added to stock");
@@ -119,6 +126,11 @@ export function ShoppingScreen() {
     }
   };
 
+  const onDelete = async (id: string) => {
+    await deleteShoppingItem(id);
+    void load();
+  };
+
   if (!current) return null;
   const toBuy = items.filter((i) => !i.is_checked);
   const done = items.filter((i) => i.is_checked);
@@ -134,7 +146,13 @@ export function ShoppingScreen() {
         ) : (
           <div className="space-y-2">
             {toBuy.map((i) => (
-              <ShoppingItemCard key={i.id} item={i} onCheck={onCheck} onDelete={(id) => void deleteShoppingItem(id)} />
+              <ShoppingItemCard
+                key={i.id}
+                item={i}
+                onCheck={onCheck}
+                onDelete={onDelete}
+                onSelect={setSelectedProduct}
+              />
             ))}
           </div>
         )}
@@ -157,7 +175,8 @@ export function ShoppingScreen() {
                   key={i.id}
                   item={i}
                   onCheck={onCheck}
-                  onDelete={(id) => void deleteShoppingItem(id)}
+                  onDelete={onDelete}
+                  onSelect={setSelectedProduct}
                 />
               ))}
             </div>
@@ -171,6 +190,7 @@ export function ShoppingScreen() {
         <Plus className="h-6 w-6" />
       </button>
       {addOpen && user && <AddItemModal householdId={current.id} userId={user.id} onClose={() => setAddOpen(false)} />}
+      {selectedProduct && <ProductPage product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
     </div>
   );
 }
