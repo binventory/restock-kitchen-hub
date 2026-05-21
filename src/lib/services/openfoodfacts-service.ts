@@ -33,9 +33,7 @@ function storeName(s: string): string {
 export async function fetchFromOpenFoodFacts(barcode: string): Promise<OffProduct | null> {
   const base = await getBaseUrl();
   try {
-    const res = await fetch(`${base}/${barcode}.json`, {
-      headers: { "User-Agent": "Restock/1.0" },
-    });
+    const res = await fetch(`${base}/${barcode}.json`);
     if (!res.ok) return null;
     const json = (await res.json()) as { status?: number; product?: Record<string, unknown> };
     if (json.status !== 1 || !json.product) return null;
