@@ -7,9 +7,9 @@
   },
   "app": { "name": "Restock", "tagline": "Your kitchen, smarter." },
   "nav": {
-    "inventory": "Inventory", "shopping": "Shopping", "cook": "Cook", "settings": "Settings"
+    "inventory": "Stock", "shopping": "Shopping", "cook": "Cook", "settings": "Settings"
   },
-  "inventory": { "title": "Inventory", "empty": "Your pantry is empty.", "emptyTitle": "Your pantry is empty", "emptyHint": "Tap the green camera button to scan your first product", "lowStock": "Low stock", "outOfStock": "Out of stock" },
+  "inventory": { "title": "Stock", "empty": "Your stock is empty. Scan a product to start.", "emptyTitle": "Your stock is empty", "emptyHint": "Scan a product to start", "lowStock": "Low stock", "outOfStock": "Out of stock" },
   "shopping": { "title": "Shopping list", "empty": "Nothing to buy yet." },
   "cook": { "title": "Cook", "empty": "AI recipe ideas coming soon." },
   "settings": {

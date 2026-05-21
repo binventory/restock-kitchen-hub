@@ -6,8 +6,8 @@
     "signOut": "Abmelden", "signIn": "Anmelden", "signUp": "Registrieren"
   },
   "app": { "name": "Restock", "tagline": "Deine Küche, smarter." },
-  "nav": { "inventory": "Vorrat", "shopping": "Einkauf", "cook": "Kochen", "settings": "Einstellungen" },
-  "inventory": { "title": "Vorrat", "empty": "Dein Vorrat ist leer.", "emptyTitle": "Dein Vorrat ist leer", "emptyHint": "Tippe den grünen Kamera-Button, um dein erstes Produkt zu scannen", "lowStock": "Niedriger Bestand", "outOfStock": "Nicht vorrätig" },
+  "nav": { "inventory": "Bestand", "shopping": "Einkauf", "cook": "Kochen", "settings": "Einstellungen" },
+  "inventory": { "title": "Bestand", "empty": "Dein Bestand ist leer. Scanne ein Produkt zum Start.", "emptyTitle": "Dein Bestand ist leer", "emptyHint": "Scanne ein Produkt zum Start.", "lowStock": "Niedriger Bestand", "outOfStock": "Nicht vorrätig" },
   "shopping": { "title": "Einkaufsliste", "empty": "Noch nichts zu kaufen." },
   "cook": { "title": "Kochen", "empty": "KI-Rezeptideen kommen bald." },
   "settings": {
