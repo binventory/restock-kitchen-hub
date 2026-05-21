@@ -56,7 +56,12 @@ export function InventoryScreen() {
       .channel(`household:${current.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "inventory", filter: `household_id=eq.${current.id}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "inventory",
+          filter: `household_id=eq.${current.id}`,
+        },
         () => void load(true),
       )
       .subscribe();
@@ -99,13 +104,12 @@ export function InventoryScreen() {
           items={items}
           onLoadMore={hasMore ? () => void load(false) : undefined}
           onSelect={setSelectedProduct}
+          onDeleted={() => void load(true)}
         />
       ) : (
-        <InventoryGroupedView items={items} onSelect={setSelectedProduct} />
+        <InventoryGroupedView items={items} onSelect={setSelectedProduct} onDeleted={() => void load(true)} />
       )}
-      {selectedProduct && (
-        <ProductPage product={selectedProduct} onClose={() => setSelectedProduct(null)} />
-      )}
+      {selectedProduct && <ProductPage product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
     </div>
   );
 }
