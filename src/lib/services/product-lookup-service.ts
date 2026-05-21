@@ -51,6 +51,8 @@ function rowToResolved(
 function offToInsert(off: OffProduct) {
   return { ...off, source: "openfoodfacts" as const, is_approved: true, submitted_by_user_id: null };
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _unused = offToInsert;
 
 export async function lookupBarcode(
   barcode: string,
