@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
-import { getLowStockItems, type InventoryItem } from "@/lib/services/inventory-service";
+import { getLowStockItems, fetchFullProduct, type InventoryItem } from "@/lib/services/inventory-service";
 import { addShoppingItem } from "@/lib/services/shopping-service";
 import { useAuth } from "@/contexts/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { itemToResolved } from "./item-to-resolved";
 import type { ResolvedProduct } from "@/lib/types/product";
 
 interface Props {
@@ -39,12 +38,14 @@ export function LowStockBar({ householdId, onSelectProduct }: Props) {
     toast.success("Added to shopping list");
   };
 
+  const openProduct = async (it: InventoryItem) => {
+    const full = await fetchFullProduct(it.product_id, it.user_product_id);
+    if (full) onSelectProduct(full);
+  };
+
   return (
     <div className="rounded-xl border-2 border-orange-400 bg-orange-50 dark:bg-orange-950/30 p-3">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between text-sm font-semibold"
-      >
+      <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-sm font-semibold">
         <span className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           {items.length} items running low
@@ -56,7 +57,7 @@ export function LowStockBar({ householdId, onSelectProduct }: Props) {
           {items.map((it) => (
             <button
               key={it.id}
-              onClick={() => it.product && onSelectProduct(itemToResolved(it))}
+              onClick={() => void openProduct(it)}
               className="flex w-full items-center justify-between text-sm hover:underline"
             >
               <span>{it.product?.name ?? "—"}</span>
@@ -65,7 +66,7 @@ export function LowStockBar({ householdId, onSelectProduct }: Props) {
               </span>
             </button>
           ))}
-          <Button onClick={addAll} size="sm" className="w-full mt-2">
+          <Button onClick={() => void addAll()} size="sm" className="w-full mt-2">
             Add all to shopping list
           </Button>
         </div>
