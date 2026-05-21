@@ -7,9 +7,10 @@ interface Props {
   items: InventoryItem[];
   onLoadMore?: () => void;
   onSelect: (p: ResolvedProduct) => void;
+  onDeleted?: () => void;
 }
 
-export function InventoryListView({ items, onLoadMore, onSelect }: Props) {
+export function InventoryListView({ items, onLoadMore, onSelect, onDeleted }: Props) {
   const sentinel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function InventoryListView({ items, onLoadMore, onSelect }: Props) {
   return (
     <div className="space-y-2">
       {items.map((it) => (
-        <ItemCard key={it.id} item={it} onSelect={onSelect} />
+        <ItemCard key={it.id} item={it} onSelect={onSelect} onDeleted={onDeleted} />
       ))}
       {onLoadMore && <div ref={sentinel} className="h-4" />}
     </div>
