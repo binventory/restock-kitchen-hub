@@ -111,7 +111,7 @@ export const ingestOpenFoodFactsProduct = createServerFn({ method: "POST" })
 
     const inserted = await supabaseAdmin
       .from("products")
-      .insert(insertRow)
+      .insert(insertRow as never)
       .select("*")
       .single();
     return { product: inserted.data ?? null };
