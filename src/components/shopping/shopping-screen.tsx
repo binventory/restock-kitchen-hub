@@ -81,9 +81,9 @@ export function ShoppingScreen() {
             bought, 1, "pieces",
           );
       }
-      toast.success("✅ Added to inventory");
+      toast.success("✅ Added to stock");
     } else {
-      if (confirm("Did you put it back on the shelf? OK = reverse inventory; Cancel = just uncheck")) {
+      if (confirm("Did you put it back on the shelf? OK = reverse stock; Cancel = just uncheck")) {
         if (item.product_id || item.user_product_id) {
           const col = item.product_id ? "product_id" : "user_product_id";
           const refId = (item.product_id ?? item.user_product_id)!;

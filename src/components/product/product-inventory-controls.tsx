@@ -50,7 +50,7 @@ export function ProductInventoryControls({ product, householdId }: Props) {
     const id = await addToInventory(householdId, ref, addQty, addLimit, "pieces");
     if (id) {
       setRow({ id, quantity: addQty, limit_threshold: addLimit, unit: "pieces" });
-      toast.success("Added to inventory");
+      toast.success("Added to stock");
     }
   };
 
@@ -58,7 +58,7 @@ export function ProductInventoryControls({ product, householdId }: Props) {
     const isLow = row.quantity <= row.limit_threshold;
     return (
       <div className="rounded-xl border p-4 space-y-3">
-        <p className="text-sm font-semibold">In your inventory</p>
+        <p className="text-sm font-semibold">In your stock</p>
         <div className="flex items-center justify-center gap-3">
           <button onClick={() => void change(-1)} className="h-10 w-10 grid place-items-center rounded-full bg-muted">
             <Minus className="h-4 w-4" />
@@ -83,7 +83,7 @@ export function ProductInventoryControls({ product, householdId }: Props) {
           <Input type="number" min="0" value={addLimit} onChange={(e) => setAddLimit(+e.target.value)} />
         </label>
       </div>
-      <Button onClick={() => void add()} className="w-full">Add to Inventory</Button>
+      <Button onClick={() => void add()} className="w-full">Add to Stock</Button>
     </div>
   );
 }
