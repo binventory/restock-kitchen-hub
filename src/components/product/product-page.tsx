@@ -5,13 +5,13 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { useHousehold } from "@/contexts/HouseholdProvider";
 import { getHealthProfile } from "@/lib/services/health-profile-service";
 import { ProductHeader } from "./product-header";
+import { ProductInventoryControls } from "./product-inventory-controls";
+import { ProductShoppingSection } from "./product-shopping-section";
 import { ProductNutriscoreCard } from "./product-nutriscore-card";
 import { ProductNutritionTable } from "./product-nutrition-table";
 import { ProductAllergensSection } from "./product-allergens-section";
 import { ProductHalalSection } from "./product-halal-section";
 import { ProductHealthWarnings } from "./product-health-warnings";
-import { ProductInventoryControls } from "./product-inventory-controls";
-import { ProductShoppingSection } from "./product-shopping-section";
 
 interface Props {
   product: ResolvedProduct;
@@ -31,16 +31,21 @@ export function ProductPage({ product, onClose }: Props) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto p-0">
         <div className="p-4 space-y-4">
+          {/* TOP: Identity — what is this product */}
           <ProductHeader product={product} />
-          <ProductNutriscoreCard product={product} />
-          <ProductNutritionTable product={product} />
+
+          {/* PRIMARY ACTIONS — what user wants to do with it */}
+          {current && <ProductInventoryControls product={product} householdId={current.id} />}
+          {current && user && <ProductShoppingSection product={product} householdId={current.id} userId={user.id} />}
+
+          {/* SAFETY INFO — show warnings before nutrition details */}
+          {profile && <ProductHealthWarnings product={product} profile={profile} />}
           <ProductAllergensSection product={product} />
           <ProductHalalSection product={product} />
-          {profile && <ProductHealthWarnings product={product} profile={profile} />}
-          {current && <ProductInventoryControls product={product} householdId={current.id} />}
-          {current && user && (
-            <ProductShoppingSection product={product} householdId={current.id} userId={user.id} />
-          )}
+
+          {/* DETAILED INFO — nutrition data at the bottom */}
+          <ProductNutriscoreCard product={product} />
+          <ProductNutritionTable product={product} />
         </div>
       </DialogContent>
     </Dialog>
