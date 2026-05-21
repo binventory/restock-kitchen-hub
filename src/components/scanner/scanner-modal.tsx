@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X, Flashlight, Keyboard } from "lucide-react";
+import { X, Zap, Keyboard } from "lucide-react";
 import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType, type Result } from "@zxing/library";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,24 +32,33 @@ export function ScannerModal({ onScan, onClose }: Props) {
     const start = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
         });
         streamRef.current = stream;
         localStorage.setItem("restock_camera_permission", "granted");
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           await videoRef.current.play();
         }
         setLoading(false);
-        const cb = (result: Result | null) => {
-          if (result) {
-            navigator.vibrate?.(100);
-            setFlash(true);
-            reader.reset();
-            setTimeout(() => onScan(result.getText()), 200);
-          }
-        };
-        await reader.decodeFromVideoDevice(null, videoRef.current!, cb);
+
+        readerRef.current!.decodeFromStream(
+          stream,
+          videoRef.current!,
+          (result, _err) => {
+            if (result) {
+              navigator.vibrate?.(100);
+              setFlash(true);
+              readerRef.current?.reset();
+              setTimeout(() => onScan(result.getText()), 200);
+            }
+          },
+        );
       } catch {
         localStorage.setItem("restock_camera_permission", "denied");
         setLoading(false);
@@ -60,7 +69,7 @@ export function ScannerModal({ onScan, onClose }: Props) {
 
     return () => {
       clearTimeout(t);
-      reader.reset();
+      readerRef.current?.reset();
       streamRef.current?.getTracks().forEach((tr) => tr.stop());
     };
   }, [onScan]);
@@ -86,7 +95,7 @@ export function ScannerModal({ onScan, onClose }: Props) {
         <X className="h-5 w-5" />
       </button>
       <button onClick={() => void toggleTorch()} className="absolute top-4 end-4 h-10 w-10 grid place-items-center rounded-full bg-black/50 text-white">
-        <Flashlight className="h-5 w-5" />
+        <Zap className="h-5 w-5" />
       </button>
       <div className="absolute inset-0 grid place-items-center pointer-events-none">
         <div className="relative h-60 w-72 rounded-lg border-2 border-green-400">

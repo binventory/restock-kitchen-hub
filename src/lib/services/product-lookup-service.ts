@@ -105,21 +105,29 @@ export async function lookupBarcode(
     if (up) return rowToResolved(up, "user", "user_products");
   }
 
-  // Step 4: OFF
+  // Step 4: OpenFoodFacts
   const off = await fetchFromOpenFoodFacts(barcode);
   if (off) {
-    const { data: inserted, error } = await supabase
+    const { data: inserted } = await supabase
       .from("products")
       .insert(offToInsert(off))
       .select("*")
       .single();
-    if (!error && inserted) return rowToResolved(inserted, "global", "products");
-    const { data: re } = await supabase
+    if (inserted) return rowToResolved(inserted, "global", "products");
+    const { data: existing } = await supabase
       .from("products")
       .select("*")
       .eq("barcode", barcode)
+      .eq("is_approved", true)
       .maybeSingle();
-    if (re) return rowToResolved(re, "global", "products");
+    if (existing) return rowToResolved(existing, "global", "products");
+    return {
+      id: `off_${barcode}`,
+      type: "global" as const,
+      tableSource: "products" as const,
+      isRejected: false,
+      ...off,
+    };
   }
   return null;
 }
