@@ -5,14 +5,19 @@ import { ItemCard } from "./item-card";
 import type { InventoryItem } from "@/lib/services/inventory-service";
 import type { ResolvedProduct } from "@/lib/types/product";
 
-interface Section { id: string; name: string; emoji: string | null; }
+interface Section {
+  id: string;
+  name: string;
+  emoji: string | null;
+}
 
 interface Props {
   items: InventoryItem[];
   onSelect: (p: ResolvedProduct) => void;
+  onDeleted?: () => void;
 }
 
-export function InventoryGroupedView({ items, onSelect }: Props) {
+export function InventoryGroupedView({ items, onSelect, onDeleted }: Props) {
   const [sections, setSections] = useState<Section[]>([]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
@@ -50,7 +55,7 @@ export function InventoryGroupedView({ items, onSelect }: Props) {
         {isOpen && (
           <div className="p-2 space-y-2 border-t">
             {list.map((it) => (
-              <ItemCard key={it.id} item={it} onSelect={onSelect} />
+              <ItemCard key={it.id} item={it} onSelect={onSelect} onDeleted={onDeleted} />
             ))}
           </div>
         )}
