@@ -1,63 +1,133 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Trash2 } from "lucide-react";
 import type { ShoppingItem } from "@/lib/services/shopping-service";
+import { fetchFullProduct } from "@/lib/services/inventory-service";
+import type { ResolvedProduct } from "@/lib/types/product";
 
 interface Props {
   item: ShoppingItem;
   onCheck: (item: ShoppingItem, checked: boolean, bought: number) => void;
   onDelete: (id: string) => void;
+  onSelect?: (p: ResolvedProduct) => void;
 }
 
-export function ShoppingItemCard({ item, onCheck, onDelete }: Props) {
+const SWIPE_THRESHOLD = 80;
+
+export function ShoppingItemCard({ item, onCheck, onDelete, onSelect }: Props) {
   const [bought, setBought] = useState(item.needed_quantity);
+  const [offset, setOffset] = useState(0);
+  const [confirming, setConfirming] = useState(false);
+  const startX = useRef(0);
+  const swiping = useRef(false);
+
   const name = item.product?.name ?? item.custom_text ?? "—";
   const sub = item.product?.brand ?? null;
   const img = item.custom_image_url ?? item.product?.image_url ?? null;
 
+  const openProduct = async () => {
+    if (offset !== 0) return;
+    if (!onSelect) return;
+    // Custom items have no DB product to open
+    if (!item.product_id && !item.user_product_id) return;
+    const full = await fetchFullProduct(item.product_id, item.user_product_id);
+    if (full) onSelect(full);
+  };
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    startX.current = e.touches[0].clientX;
+    swiping.current = true;
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!swiping.current) return;
+    const dx = e.touches[0].clientX - startX.current;
+    setOffset(Math.min(0, Math.max(-120, dx)));
+  };
+  const onTouchEnd = () => {
+    swiping.current = false;
+    if (offset <= -SWIPE_THRESHOLD) {
+      setOffset(-120);
+      setConfirming(true);
+    } else {
+      setOffset(0);
+    }
+  };
+
+  const confirmDelete = () => {
+    onDelete(item.id);
+    setConfirming(false);
+  };
+
+  const cancelDelete = () => {
+    setOffset(0);
+    setConfirming(false);
+  };
+
   return (
-    <div className="flex gap-3 items-start rounded-xl border bg-card p-3">
-      <input
-        type="checkbox"
-        checked={item.is_checked}
-        onChange={(e) => onCheck(item, e.target.checked, bought)}
-        className="h-5 w-5 mt-1"
-      />
-      <div className="h-12 w-12 rounded-md bg-muted overflow-hidden flex-shrink-0 grid place-items-center">
-        {img ? (
-          <img src={img} alt="" className="h-full w-full object-cover" />
+    <div className="relative overflow-hidden rounded-xl">
+      {/* Red delete background revealed by swipe */}
+      <div className="absolute inset-y-0 right-0 flex items-center justify-end bg-red-500 px-4 gap-2">
+        {confirming ? (
+          <>
+            <button onClick={cancelDelete} className="text-xs text-white bg-black/30 px-2 py-1 rounded">
+              Cancel
+            </button>
+            <button onClick={confirmDelete} className="text-xs text-white bg-white/20 px-2 py-1 rounded font-semibold">
+              Delete
+            </button>
+          </>
         ) : (
-          <span className="text-sm font-bold text-muted-foreground">{name[0]}</span>
+          <Trash2 className="h-5 w-5 text-white" />
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{name}</p>
-        {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
-        {item.item_note && (
-          <p className="text-xs text-green-700 dark:text-green-400 truncate">📝 {item.item_note}</p>
-        )}
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-xs bg-muted px-2 py-0.5 rounded">Need {item.needed_quantity}</span>
-          {item.added_automatically && (
-            <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded">Auto</span>
-          )}
-          {!item.is_checked && (
-            <label className="text-xs text-muted-foreground flex items-center gap-1">
-              Bought:
-              <Input
-                type="number"
-                min="0"
-                value={bought}
-                onChange={(e) => setBought(+e.target.value)}
-                className="h-6 w-14 text-xs"
-              />
-            </label>
+
+      {/* Foreground card */}
+      <div
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        style={{ transform: `translateX(${offset}px)` }}
+        className="flex gap-3 items-start rounded-xl border bg-card p-3 transition-transform"
+      >
+        <input
+          type="checkbox"
+          checked={item.is_checked}
+          onChange={(e) => onCheck(item, e.target.checked, bought)}
+          className="h-5 w-5 mt-1"
+          onClick={(e) => e.stopPropagation()}
+        />
+        <div
+          className="h-12 w-12 rounded-md bg-muted overflow-hidden flex-shrink-0 grid place-items-center cursor-pointer"
+          onClick={() => void openProduct()}
+        >
+          {img ? (
+            <img src={img} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-sm font-bold text-muted-foreground">{name[0]}</span>
           )}
         </div>
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => void openProduct()}>
+          <p className="font-medium text-sm truncate">{name}</p>
+          {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
+          {item.item_note && <p className="text-xs text-green-700 dark:text-green-400 truncate">📝 {item.item_note}</p>}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs bg-muted px-2 py-0.5 rounded">Need {item.needed_quantity}</span>
+            {item.added_automatically && (
+              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded">
+                Auto
+              </span>
+            )}
+          </div>
+        </div>
+        <Input
+          type="number"
+          value={bought}
+          min={0}
+          onChange={(e) => setBought(Math.max(0, Number(e.target.value)))}
+          className="w-16 h-9 text-sm"
+          onClick={(e) => e.stopPropagation()}
+        />
       </div>
-      <button onClick={() => onDelete(item.id)} className="text-muted-foreground hover:text-destructive">
-        <Trash2 className="h-4 w-4" />
-      </button>
     </div>
   );
 }
