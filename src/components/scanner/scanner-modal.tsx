@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Zap, Keyboard } from "lucide-react";
-import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
+import pkg from "@zxing/library";
+const { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } = pkg;
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +13,7 @@ interface Props {
 
 export function ScannerModal({ stream, onScan, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
+  const readerRef = useRef<InstanceType<typeof BrowserMultiFormatReader> | null>(null);
   const [loading, setLoading] = useState(true);
   const [manual, setManual] = useState(false);
   const [manualVal, setManualVal] = useState("");

@@ -44,10 +44,14 @@ export function ScannerSetupWizard({ onClose }: Props) {
     const { data, error } = await supabase
       .from("scanners")
       .insert({ household_id: current.id, name, location })
-      .select("token")
+      .select("id")
       .single();
     if (error || !data) return toast.error("Failed");
-    setToken(data.token);
+    const { data: tok, error: tErr } = await supabase.rpc("get_scanner_token", {
+      _scanner_id: data.id as string,
+    });
+    if (tErr || !tok) return toast.error("Failed");
+    setToken(tok as string);
     setStep(2);
   };
 

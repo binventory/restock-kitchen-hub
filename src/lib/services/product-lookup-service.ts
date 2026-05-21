@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { fetchFromOpenFoodFacts } from "./openfoodfacts-service";
+import { ingestOpenFoodFactsProduct } from "./openfoodfacts-ingest.functions";
 import type { OffProduct, ResolvedProduct } from "@/lib/types/product";
 
 function rowToResolved(
@@ -50,6 +51,8 @@ function rowToResolved(
 function offToInsert(off: OffProduct) {
   return { ...off, source: "openfoodfacts" as const, is_approved: true, submitted_by_user_id: null };
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _unused = offToInsert;
 
 export async function lookupBarcode(
   barcode: string,
@@ -105,22 +108,17 @@ export async function lookupBarcode(
     if (up) return rowToResolved(up, "user", "user_products");
   }
 
-  // Step 4: OpenFoodFacts
+  // Step 4: OpenFoodFacts (ingest server-side to avoid client self-approval)
+  const ingest = await ingestOpenFoodFactsProduct({ data: { barcode } });
+  if (ingest?.product) {
+    return rowToResolved(
+      ingest.product as unknown as Record<string, unknown>,
+      "global",
+      "products",
+    );
+  }
   const off = await fetchFromOpenFoodFacts(barcode);
   if (off) {
-    const { data: inserted } = await supabase
-      .from("products")
-      .insert(offToInsert(off))
-      .select("*")
-      .single();
-    if (inserted) return rowToResolved(inserted, "global", "products");
-    const { data: existing } = await supabase
-      .from("products")
-      .select("*")
-      .eq("barcode", barcode)
-      .eq("is_approved", true)
-      .maybeSingle();
-    if (existing) return rowToResolved(existing, "global", "products");
     return {
       id: `off_${barcode}`,
       type: "global" as const,
