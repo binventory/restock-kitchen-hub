@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { ResolvedProduct } from "@/lib/types/product";
 
 export interface InventoryItem {
   id: string;
@@ -30,7 +31,6 @@ interface Opts {
 
 export async function getInventory(householdId: string, opts: Opts = {}): Promise<InventoryItem[]> {
   const { limit = 20, offset = 0, filter = "all", sort = "name", search = "" } = opts;
-
   let q = supabase
     .from("inventory")
     .select(
@@ -39,10 +39,8 @@ export async function getInventory(householdId: string, opts: Opts = {}): Promis
     .eq("household_id", householdId);
 
   if (filter === "out") q = q.eq("quantity", 0);
-
   if (sort === "name") q = q.order("created_at", { ascending: true });
   else if (sort === "qty_asc") q = q.order("quantity", { ascending: true });
-
   q = q.range(offset, offset + limit - 1);
 
   const { data, error } = await q;
@@ -77,17 +75,137 @@ export async function getInventory(householdId: string, opts: Opts = {}): Promis
   return items;
 }
 
-export async function updateQuantity(itemId: string, newQty: number): Promise<void> {
-  await supabase
-    .from("inventory")
-    .update({ quantity: Math.max(0, newQty) })
-    .eq("id", itemId);
+/**
+ * Fetch the full product row (all nutrition, allergen, halal fields)
+ * from products or user_products. Used when opening Product Page
+ * from Stock or Shopping list (where we only had partial data).
+ */
+export async function fetchFullProduct(
+  productId: string | null,
+  userProductId: string | null,
+): Promise<ResolvedProduct | null> {
+  const table = productId ? "products" : "user_products";
+  const id = productId ?? userProductId;
+  if (!id) return null;
+
+  const { data, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
+  if (error || !data) return null;
+
+  // products table has all nutrition fields, user_products has fewer
+  return {
+    id: String(data.id),
+    type: productId ? "global" : "user",
+    tableSource: productId ? "products" : "user_products",
+    barcode: (data.barcode as string) ?? "",
+    name: (data.name as string) ?? "—",
+    brand: (data.brand as string | null) ?? null,
+    generic_name: (data.generic_name as string | null) ?? null,
+    category: (data.category as string | null) ?? null,
+    image_url: (data.image_url as string | null) ?? null,
+    quantity_value: (data.quantity_value as number | null) ?? null,
+    quantity_unit: (data.quantity_unit as string | null) ?? null,
+    calories_100g: (data.calories_100g as number | null) ?? null,
+    fat_100g: (data.fat_100g as number | null) ?? null,
+    saturated_fat_100g: (data.saturated_fat_100g as number | null) ?? null,
+    carbohydrates_100g: (data.carbohydrates_100g as number | null) ?? null,
+    sugars_100g: (data.sugars_100g as number | null) ?? null,
+    proteins_100g: (data.proteins_100g as number | null) ?? null,
+    salt_100g: (data.salt_100g as number | null) ?? null,
+    fiber_100g: (data.fiber_100g as number | null) ?? null,
+    serving_size_g: (data.serving_size_g as number | null) ?? null,
+    calories_serving: (data.calories_serving as number | null) ?? null,
+    nutriscore: (data.nutriscore as ResolvedProduct["nutriscore"]) ?? null,
+    ecoscore: (data.ecoscore as ResolvedProduct["ecoscore"]) ?? null,
+    nova_group: (data.nova_group as ResolvedProduct["nova_group"]) ?? null,
+    nutrient_levels: (data.nutrient_levels as Record<string, string> | null) ?? null,
+    allergens: (data.allergens as string[] | null) ?? [],
+    traces_allergens: (data.traces_allergens as string[] | null) ?? [],
+    labels: (data.labels as string[] | null) ?? [],
+    is_vegan: (data.is_vegan as boolean | null) ?? null,
+    is_vegetarian: (data.is_vegetarian as boolean | null) ?? null,
+    is_gluten_free: (data.is_gluten_free as boolean | null) ?? null,
+    has_palm_oil: (data.has_palm_oil as boolean | null) ?? null,
+    halal_certified: (data.halal_certified as boolean | null) ?? null,
+    ingredients_text: (data.ingredients_text as string | null) ?? null,
+    ingredients_analysis: (data.ingredients_analysis as string[] | null) ?? [],
+    available_stores: (data.available_stores as string[] | null) ?? [],
+  };
 }
 
 /**
- * Add product to inventory. If the product is already in inventory
- * (same household + same product/user_product), increment the
- * quantity instead of creating a duplicate row.
+ * Match product name to a product_group via its keywords.
+ * Used to auto-categorize inventory items.
+ */
+async function autoDetectGroup(
+  productName: string,
+): Promise<{ section_id: string | null; product_group_id: string | null }> {
+  const lower = productName.toLowerCase();
+  const { data: groups } = await supabase.from("product_groups").select("id, section_id, keywords");
+  if (!groups) return { section_id: null, product_group_id: null };
+  for (const g of groups) {
+    const kw = (g.keywords as string[] | null) ?? [];
+    if (kw.some((k) => lower.includes(k.toLowerCase()))) {
+      return {
+        section_id: (g.section_id as string | null) ?? null,
+        product_group_id: (g.id as string) ?? null,
+      };
+    }
+  }
+  return { section_id: null, product_group_id: null };
+}
+
+/**
+ * Update inventory quantity. If new quantity drops to or below the
+ * limit_threshold, automatically add the product to the household's
+ * shopping list (unless it's already on the list unchecked).
+ */
+export async function updateQuantity(itemId: string, newQty: number): Promise<void> {
+  const safe = Math.max(0, newQty);
+
+  // Read the current row to know household, product, and limit
+  const { data: row } = await supabase
+    .from("inventory")
+    .select("household_id, product_id, user_product_id, limit_threshold, quantity")
+    .eq("id", itemId)
+    .maybeSingle();
+
+  await supabase.from("inventory").update({ quantity: safe }).eq("id", itemId);
+
+  if (!row) return;
+  const limit = Number(row.limit_threshold);
+  const wasAbove = Number(row.quantity) > limit;
+  const nowBelow = safe <= limit;
+
+  // Only trigger auto-add when quantity CROSSES the limit going down
+  if (!wasAbove || !nowBelow) return;
+
+  // Check if not already on shopping list (unchecked)
+  const col = row.product_id ? "product_id" : "user_product_id";
+  const refId = row.product_id ?? row.user_product_id;
+  if (!refId) return;
+
+  const { data: existing } = await supabase
+    .from("shopping_list")
+    .select("id")
+    .eq("household_id", row.household_id)
+    .eq("is_checked", false)
+    .eq(col, refId)
+    .maybeSingle();
+
+  if (existing) return; // Already there
+
+  // Auto-add to shopping list
+  await supabase.from("shopping_list").insert({
+    household_id: row.household_id,
+    [col]: refId,
+    needed_quantity: 1,
+    added_automatically: true,
+  });
+}
+
+/**
+ * Add product to inventory. Auto-detects section/group from product name.
+ * If already in inventory, increments quantity instead of duplicating.
  */
 export async function addToInventory(
   householdId: string,
@@ -95,17 +213,16 @@ export async function addToInventory(
   quantity: number,
   limit: number,
   unit: string,
+  productName?: string,
 ): Promise<string | null> {
-  // Reject temporary "off_" IDs that are not valid UUIDs.
-  // Caller must first save product to user_products to get a real UUID.
   if (ref.product_id && ref.product_id.startsWith("off_")) return null;
   if (ref.user_product_id && ref.user_product_id.startsWith("off_")) return null;
 
-  // First check if a row already exists for this product
   const col = ref.product_id ? "product_id" : "user_product_id";
   const refId = ref.product_id ?? ref.user_product_id;
   if (!refId) return null;
 
+  // Check if already in inventory
   const { data: existing } = await supabase
     .from("inventory")
     .select("id, quantity")
@@ -114,13 +231,20 @@ export async function addToInventory(
     .maybeSingle();
 
   if (existing) {
-    // Already in inventory — increment quantity, keep existing limit/unit
     const newQty = Number(existing.quantity) + quantity;
     await supabase.from("inventory").update({ quantity: newQty }).eq("id", existing.id);
     return existing.id;
   }
 
-  // Not in inventory yet — insert a new row
+  // Auto-detect section + group from product name
+  let section_id: string | null = null;
+  let product_group_id: string | null = null;
+  if (productName) {
+    const detected = await autoDetectGroup(productName);
+    section_id = detected.section_id;
+    product_group_id = detected.product_group_id;
+  }
+
   const { data } = await supabase
     .from("inventory")
     .insert({
@@ -130,6 +254,8 @@ export async function addToInventory(
       quantity,
       limit_threshold: limit,
       unit: unit as "pieces",
+      section_id,
+      product_group_id,
     })
     .select("id")
     .single();
