@@ -1,17 +1,26 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { OffProduct, Grade } from "@/lib/types/product";
 
-const DEFAULT_URL = "https://world.openfoodfacts.net/api/v2/product";
+// Use the PRODUCTION OpenFoodFacts API (.org).
+// The .net domain is STAGING and requires Basic Auth (off:off)
+// per the official docs — using it without auth returns 401
+// and the product lookup silently fails.
+// Docs: https://wiki.openfoodfacts.org/API
+const DEFAULT_URL = "https://world.openfoodfacts.org/api/v2/product";
 let cachedBase: string | null = null;
 
 async function getBaseUrl(): Promise<string> {
   if (cachedBase) return cachedBase;
-  const { data } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "openfoodfacts_api_url")
-    .maybeSingle();
-  cachedBase = data?.value || DEFAULT_URL;
+  const { data } = await supabase.from("app_settings").select("value").eq("key", "openfoodfacts_api_url").maybeSingle();
+  // Safety net: if the database still has the staging .net domain,
+  // ignore it and force the production .org default. This protects
+  // us if the SQL update was missed or a fresh install gets old seed.
+  const v = data?.value;
+  if (!v || v.includes("openfoodfacts.net")) {
+    cachedBase = DEFAULT_URL;
+  } else {
+    cachedBase = v;
+  }
   return cachedBase;
 }
 
@@ -35,7 +44,10 @@ export async function fetchFromOpenFoodFacts(barcode: string): Promise<OffProduc
   try {
     const res = await fetch(`${base}/${barcode}.json`);
     if (!res.ok) return null;
-    const json = (await res.json()) as { status?: number; product?: Record<string, unknown> };
+    const json = (await res.json()) as {
+      status?: number;
+      product?: Record<string, unknown>;
+    };
     if (json.status !== 1 || !json.product) return null;
     return parseOff(barcode, json.product);
   } catch {
