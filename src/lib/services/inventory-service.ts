@@ -201,7 +201,7 @@ export async function updateQuantity(itemId: string, newQty: number): Promise<vo
     [col]: refId,
     needed_quantity: 1,
     added_automatically: true,
-  });
+  } as never);
 }
 
 /**
