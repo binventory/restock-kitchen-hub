@@ -5,13 +5,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useHousehold } from "@/contexts/HouseholdProvider";
 import {
-  getShoppingList, setChecked, clearChecked, deleteShoppingItem, type ShoppingItem,
+  getShoppingList,
+  setChecked,
+  clearChecked,
+  deleteShoppingItem,
+  type ShoppingItem,
 } from "@/lib/services/shopping-service";
 import { updateQuantity, addToInventory } from "@/lib/services/inventory-service";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ShoppingItemCard } from "./shopping-item-card";
 import { AddItemModal } from "./add-item-modal";
+import { ProductPage } from "@/components/product/product-page";
+import type { ResolvedProduct } from "@/lib/types/product";
 
 const cacheKey = (hid: string) => `restock_shopping_${hid}`;
 
@@ -36,10 +42,15 @@ export function ShoppingScreen() {
     localStorage.setItem(cacheKey(current.id), JSON.stringify(data));
   }, [current]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   useEffect(() => {
-    const on = () => { setOnline(true); void load(); };
+    const on = () => {
+      setOnline(true);
+      void load();
+    };
     const off = () => setOnline(false);
     window.addEventListener("online", on);
     window.addEventListener("offline", off);
@@ -53,11 +64,17 @@ export function ShoppingScreen() {
     if (!current) return;
     const ch = supabase
       .channel(`household:${current.id}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "shopping_list", filter: `household_id=eq.${current.id}` }, () => {
-        void load();
-      })
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "shopping_list", filter: `household_id=eq.${current.id}` },
+        () => {
+          void load();
+        },
+      )
       .subscribe();
-    return () => { void supabase.removeChannel(ch); };
+    return () => {
+      void supabase.removeChannel(ch);
+    };
   }, [current, load]);
 
   const onCheck = async (item: ShoppingItem, checked: boolean, bought: number) => {
@@ -78,7 +95,9 @@ export function ShoppingScreen() {
           await addToInventory(
             item.household_id,
             item.product_id ? { product_id: refId } : { user_product_id: refId },
-            bought, 1, "pieces",
+            bought,
+            1,
+            "pieces",
           );
       }
       toast.success("✅ Added to stock");
@@ -88,8 +107,11 @@ export function ShoppingScreen() {
           const col = item.product_id ? "product_id" : "user_product_id";
           const refId = (item.product_id ?? item.user_product_id)!;
           const { data: inv } = await supabase
-            .from("inventory").select("id, quantity")
-            .eq("household_id", item.household_id).eq(col, refId).maybeSingle();
+            .from("inventory")
+            .select("id, quantity")
+            .eq("household_id", item.household_id)
+            .eq(col, refId)
+            .maybeSingle();
           if (inv) await updateQuantity(inv.id, Math.max(0, Number(inv.quantity) - item.bought_quantity));
         }
       }
@@ -104,9 +126,7 @@ export function ShoppingScreen() {
   return (
     <div className="mx-auto max-w-3xl p-4 space-y-4">
       <h1 className="text-2xl font-bold">{t("shopping.title")}</h1>
-      {!online && (
-        <div className="rounded-lg bg-orange-100 dark:bg-orange-950/30 px-3 py-2 text-sm">📴 Offline</div>
-      )}
+      {!online && <div className="rounded-lg bg-orange-100 dark:bg-orange-950/30 px-3 py-2 text-sm">📴 Offline</div>}
       <section>
         <p className="text-sm font-semibold mb-2">To Buy ({toBuy.length})</p>
         {toBuy.length === 0 ? (
@@ -126,12 +146,19 @@ export function ShoppingScreen() {
               <ChevronDown className={`h-4 w-4 transition ${showDone ? "" : "-rotate-90"}`} />
               Done ({done.length})
             </button>
-            <Button size="sm" variant="ghost" onClick={() => void clearChecked(current.id)}>Clear done</Button>
+            <Button size="sm" variant="ghost" onClick={() => void clearChecked(current.id)}>
+              Clear done
+            </Button>
           </div>
           {showDone && (
             <div className="space-y-2 opacity-60">
               {done.map((i) => (
-                <ShoppingItemCard key={i.id} item={i} onCheck={onCheck} onDelete={(id) => void deleteShoppingItem(id)} />
+                <ShoppingItemCard
+                  key={i.id}
+                  item={i}
+                  onCheck={onCheck}
+                  onDelete={(id) => void deleteShoppingItem(id)}
+                />
               ))}
             </div>
           )}
