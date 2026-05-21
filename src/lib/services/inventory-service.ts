@@ -88,8 +88,9 @@ export async function fetchFullProduct(
   const id = productId ?? userProductId;
   if (!id) return null;
 
-  const { data, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
-  if (error || !data) return null;
+  const { data: raw, error } = await supabase.from(table).select("*").eq("id", id).maybeSingle();
+  if (error || !raw) return null;
+  const data = raw as Record<string, unknown>;
 
   // products table has all nutrition fields, user_products has fewer
   return {
@@ -200,7 +201,7 @@ export async function updateQuantity(itemId: string, newQty: number): Promise<vo
     [col]: refId,
     needed_quantity: 1,
     added_automatically: true,
-  });
+  } as never);
 }
 
 /**

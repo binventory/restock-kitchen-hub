@@ -621,6 +621,13 @@ export type Database = {
             referencedRelation: "offers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "offer_clicks_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       offer_views: {
@@ -648,6 +655,13 @@ export type Database = {
             columns: ["offer_id"]
             isOneToOne: false
             referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_views_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "offers_public"
             referencedColumns: ["id"]
           },
         ]
@@ -867,6 +881,13 @@ export type Database = {
             columns: ["coupon_id"]
             isOneToOne: false
             referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "popup_notifications_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1116,10 +1137,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "referrals_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "referrals_referrer_reward_coupon_id_fkey"
             columns: ["referrer_reward_coupon_id"]
             isOneToOne: false
             referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_reward_coupon_id_fkey"
+            columns: ["referrer_reward_coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons_public"
             referencedColumns: ["id"]
           },
         ]
@@ -1809,7 +1844,141 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      coupons_public: {
+        Row: {
+          amount_off: number | null
+          code: string | null
+          expires_at: string | null
+          free_days: number | null
+          id: string | null
+          percent_off: number | null
+          plan_id: string | null
+          popup_message: string | null
+          popup_title: string | null
+          show_as_popup: boolean | null
+          type: string | null
+        }
+        Insert: {
+          amount_off?: number | null
+          code?: string | null
+          expires_at?: string | null
+          free_days?: number | null
+          id?: string | null
+          percent_off?: number | null
+          plan_id?: string | null
+          popup_message?: string | null
+          popup_title?: string | null
+          show_as_popup?: boolean | null
+          type?: string | null
+        }
+        Update: {
+          amount_off?: number | null
+          code?: string | null
+          expires_at?: string | null
+          free_days?: number | null
+          id?: string | null
+          percent_off?: number | null
+          plan_id?: string | null
+          popup_message?: string | null
+          popup_title?: string | null
+          show_as_popup?: boolean | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupons_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offers_public: {
+        Row: {
+          clicks_count: number | null
+          coupon_code: string | null
+          description: string | null
+          discount_value: number | null
+          ends_at: string | null
+          id: string | null
+          image_url: string | null
+          max_clicks: number | null
+          max_views: number | null
+          offer_type: string | null
+          product_group_id: string | null
+          product_id: string | null
+          section_id: string | null
+          starts_at: string | null
+          supermarket: string | null
+          target_plans: string[] | null
+          title: string | null
+          views_count: number | null
+        }
+        Insert: {
+          clicks_count?: number | null
+          coupon_code?: string | null
+          description?: string | null
+          discount_value?: number | null
+          ends_at?: string | null
+          id?: string | null
+          image_url?: string | null
+          max_clicks?: number | null
+          max_views?: number | null
+          offer_type?: string | null
+          product_group_id?: string | null
+          product_id?: string | null
+          section_id?: string | null
+          starts_at?: string | null
+          supermarket?: string | null
+          target_plans?: string[] | null
+          title?: string | null
+          views_count?: number | null
+        }
+        Update: {
+          clicks_count?: number | null
+          coupon_code?: string | null
+          description?: string | null
+          discount_value?: number | null
+          ends_at?: string | null
+          id?: string | null
+          image_url?: string | null
+          max_clicks?: number | null
+          max_views?: number | null
+          offer_type?: string | null
+          product_group_id?: string | null
+          product_id?: string | null
+          section_id?: string | null
+          starts_at?: string | null
+          supermarket?: string | null
+          target_plans?: string[] | null
+          title?: string | null
+          views_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offers_product_group_id_fkey"
+            columns: ["product_group_id"]
+            isOneToOne: false
+            referencedRelation: "product_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offers_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invite: { Args: { _token: string }; Returns: string }
@@ -1820,6 +1989,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["admin_role"]
       }
+      get_scanner_token: { Args: { _scanner_id: string }; Returns: string }
       has_admin_permission: {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
