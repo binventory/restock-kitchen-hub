@@ -29,17 +29,26 @@ export function InventoryScreen() {
     async (reset = true) => {
       if (!current) return;
       setLoading(true);
+
+      const currentOffset = reset ? 0 : offset;
+
       const data = await getInventory(current.id, {
         limit: PAGE_SIZE,
-        offset: reset ? 0 : offset,
+        offset: currentOffset,
         search,
         sort,
         filter,
       });
-      setItems((prev) => (reset ? data : [...prev, ...data]));
+
+      setItems((prev) => {
+        if (reset) return data;
+        const combined = [...prev, ...data];
+        const uniqueMap = new Map(combined.map((item) => [item.id, item]));
+        return Array.from(uniqueMap.values());
+      });
+
       setHasMore(data.length === PAGE_SIZE);
-      if (reset) setOffset(PAGE_SIZE);
-      else setOffset(offset + PAGE_SIZE);
+      setOffset(currentOffset + PAGE_SIZE);
       setLoading(false);
     },
     [current, search, sort, filter, offset],
