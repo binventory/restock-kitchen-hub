@@ -117,6 +117,7 @@ export function ProductInventoryControls({ product, householdId }: Props) {
           unit: "pieces",
         });
         toast.success("Added to stock");
+        void qc.invalidateQueries({ queryKey: qk.inventory(householdId) });
       } else {
         toast.error("Could not add to stock");
       }
