@@ -91,7 +91,7 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
         <input
           type="checkbox"
           checked={item.is_checked}
-          onChange={(e) => onCheck(item, e.target.checked, bought)}
+          onChange={(e) => onCheck(item, e.target.checked, item.needed_quantity)}
           className="h-5 w-5 mt-1"
           onClick={(e) => e.stopPropagation()}
         />
