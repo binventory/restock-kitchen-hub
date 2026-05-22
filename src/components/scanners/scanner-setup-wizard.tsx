@@ -19,6 +19,22 @@ interface Step {
   qr_payload: string;
 }
 
+// Builds the firmware config payload from user-supplied WiFi credentials.
+// All values are passed through JSON.stringify, which escapes every
+// special character (commas, quotes, newlines, backslashes), so a
+// malicious SSID like  evil,evilpass,https://attacker/scan,realtoken
+// cannot shift the endpoint / token fields. Firmware must JSON.parse()
+// the body that follows the "CONFIG:" prefix.
+function buildConfigPayload(input: { ssid: string; pwd: string; endpoint: string; token: string }): string {
+  const safeBody = JSON.stringify({
+    ssid: input.ssid,
+    pwd: input.pwd,
+    endpoint: input.endpoint,
+    token: input.token,
+  });
+  return "CONFIG:" + safeBody;
+}
+
 export function ScannerSetupWizard({ onClose }: Props) {
   const { current } = useHousehold();
   const [step, setStep] = useState(1);
@@ -70,16 +86,25 @@ export function ScannerSetupWizard({ onClose }: Props) {
   };
 
   const buildFinal = async () => {
-    const url = await supabase.from("app_settings").select("value").eq("key", "scanner_endpoint_url").maybeSingle();
-    const endpoint = url.data?.value ?? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan`;
-    // Structured JSON payload — commas, quotes or newlines inside the
-    // WiFi credentials are escaped by JSON.stringify and cannot shift
-    // the endpoint or token fields. Firmware must JSON.parse() the
-    // body that follows the "CONFIG:" prefix.
-    const payload = `CONFIG:${JSON.stringify({ ssid, pwd, endpoint, token })}`;
-    const qr = await QRCode.toDataURL(payload, { width: 320 });
-    setFinalQr(qr);
-    setStep(4);
+    if (!token) {
+      toast.error("Scanner token missing. Restart the wizard.");
+      return;
+    }
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "scanner_endpoint_url")
+      .maybeSingle();
+    const endpoint = data?.value ?? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan`;
+    const payload = buildConfigPayload({ ssid, pwd, endpoint, token });
+    try {
+      const qr = await QRCode.toDataURL(payload, { width: 320 });
+      setFinalQr(qr);
+      setStep(4);
+    } catch (e) {
+      console.error("[scanner qr]", e);
+      toast.error("Could not generate QR code. Please try again.");
+    }
   };
 
   return (
