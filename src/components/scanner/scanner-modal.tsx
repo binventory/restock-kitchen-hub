@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Zap, Keyboard } from "lucide-react";
-import pkg from "@zxing/library";
-const { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } = pkg;
+import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
