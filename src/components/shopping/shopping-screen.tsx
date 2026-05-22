@@ -12,6 +12,7 @@ import {
   type ShoppingItem,
 } from "@/lib/services/shopping-service";
 import { updateQuantity, addToInventory } from "@/lib/services/inventory-service";
+import { updateShoppingListQuantity } from "@/lib/services/shopping-list-service";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ShoppingItemCard } from "./shopping-item-card";
