@@ -2002,7 +2002,7 @@ export type Database = {
       }
     }
     Functions: {
-      accept_invite: { Args: { _token: string }; Returns: string }
+      accept_invite: { Args: { _token: string }; Returns: undefined }
       can_see_profile: { Args: { _target: string }; Returns: boolean }
       cancel_own_order: { Args: { _order_id: string }; Returns: undefined }
       create_household: { Args: { _name: string }; Returns: string }
