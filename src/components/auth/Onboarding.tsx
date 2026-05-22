@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { createHousehold, acceptInvite } from "@/lib/services/household-service";
+import { createHousehold, acceptInvite, friendlyHouseholdError } from "@/lib/services/household-service";
 import { useHousehold } from "@/contexts/HouseholdProvider";
 
 export function Onboarding() {
@@ -24,7 +24,10 @@ export function Onboarding() {
       }
       await refresh();
     } catch (e) {
-      setError((e as Error).message);
+      // The service layer already returns friendly text where it can;
+      // fall back through the mapper for anything that bubbled up raw.
+      console.error("[onboarding]", e);
+      setError(friendlyHouseholdError(e, "Something went wrong. Please try again."));
     } finally {
       setBusy(false);
     }
@@ -35,10 +38,16 @@ export function Onboarding() {
       <div className="w-full max-w-sm rounded-2xl border bg-[var(--bg-elevated)] p-6 shadow-sm">
         <h1 className="text-xl font-bold text-center">{t("onboarding.title")}</h1>
         <div className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1 text-sm">
-          <button onClick={() => setMode("create")} className={`rounded-md px-3 py-1.5 ${mode === "create" ? "bg-[var(--bg-elevated)] font-semibold" : ""}`}>
+          <button
+            onClick={() => setMode("create")}
+            className={`rounded-md px-3 py-1.5 ${mode === "create" ? "bg-[var(--bg-elevated)] font-semibold" : ""}`}
+          >
             {t("onboarding.createHousehold")}
           </button>
-          <button onClick={() => setMode("join")} className={`rounded-md px-3 py-1.5 ${mode === "join" ? "bg-[var(--bg-elevated)] font-semibold" : ""}`}>
+          <button
+            onClick={() => setMode("join")}
+            className={`rounded-md px-3 py-1.5 ${mode === "join" ? "bg-[var(--bg-elevated)] font-semibold" : ""}`}
+          >
             {t("onboarding.joinHousehold")}
           </button>
         </div>
