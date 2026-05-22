@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import type { ResolvedProduct } from "@/lib/types/product";
 import { addToInventory, updateQuantity } from "@/lib/services/inventory-service";
 import { suggestLimit } from "@/lib/services/smart-limits-service";
+import { qk } from "@/lib/query-keys";
 import { useHousehold } from "@/contexts/HouseholdProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
@@ -14,6 +16,7 @@ interface Props {
   product: ResolvedProduct;
   householdId: string;
 }
+
 
 interface InvRow {
   id: string;
