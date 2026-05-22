@@ -60,6 +60,22 @@ export function FAB() {
         toast.error("Camera access denied. Please enable camera in your browser settings.");
       } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
         toast.error("No camera found on this device.");
+      } else if (name === "OverconstrainedError" || name === "ConstraintNotSatisfiedError") {
+        // Fallback: no rear camera or constraints unsupported — try with ideal
+        try {
+          const s = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: "environment" },
+              width: { ideal: 1920, min: 1280 },
+              height: { ideal: 1080, min: 720 },
+            },
+          });
+          setStream(s);
+          setOpen(true);
+        } catch {
+          setStream(null);
+          setOpen(true);
+        }
       } else {
         // Any other error: open modal in manual entry mode instead
         // Do NOT permanently block camera — it might work next time
