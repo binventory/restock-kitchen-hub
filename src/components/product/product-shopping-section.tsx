@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { addShoppingItem, deleteShoppingItem } from "@/lib/services/shopping-service";
+import { qk } from "@/lib/query-keys";
 import { toast } from "sonner";
 import type { ResolvedProduct } from "@/lib/types/product";
 
@@ -9,6 +11,7 @@ interface Props { product: ResolvedProduct; householdId: string; userId: string;
 
 export function ProductShoppingSection({ product, householdId, userId }: Props) {
   const [id, setId] = useState<string | null>(null);
+  const qc = useQueryClient();
 
   useEffect(() => {
     const col = product.tableSource === "products" ? "product_id" : "user_product_id";
@@ -28,7 +31,7 @@ export function ProductShoppingSection({ product, householdId, userId }: Props) 
       : { user_product_id: product.id };
     await addShoppingItem({ household_id: householdId, added_by: userId, ...ref });
     toast.success("Added to shopping list");
-    // re-fetch
+    void qc.invalidateQueries({ queryKey: qk.shopping(householdId) });
     const col = product.tableSource === "products" ? "product_id" : "user_product_id";
     const { data } = await supabase
       .from("shopping_list").select("id").eq("household_id", householdId)
@@ -41,6 +44,7 @@ export function ProductShoppingSection({ product, householdId, userId }: Props) 
     await deleteShoppingItem(id);
     setId(null);
     toast.success("Removed from list");
+    void qc.invalidateQueries({ queryKey: qk.shopping(householdId) });
   };
 
   return (
