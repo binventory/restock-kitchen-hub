@@ -28,6 +28,7 @@ interface InvRow {
 export function ProductInventoryControls({ product, householdId }: Props) {
   const { households } = useHousehold();
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [row, setRow] = useState<InvRow | null>(null);
   const [addQty, setAddQty] = useState(1);
   const [addLimit, setAddLimit] = useState(1);
