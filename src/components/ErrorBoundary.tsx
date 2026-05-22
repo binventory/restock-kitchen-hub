@@ -1,5 +1,7 @@
 import { Component, type ReactNode, type ErrorInfo } from "react";
 
+const BUILD_TAG = "restock-eb-2026-05-22";
+
 interface State {
   hasError: boolean;
   message: string;
@@ -24,30 +26,40 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="grid min-h-screen place-items-center p-6 text-center">
-          <div className="max-w-2xl w-full">
-            <h1 className="text-xl font-bold">Something went wrong</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Please try reloading the page. If the problem persists, contact support.
+        <div className="min-h-screen bg-[var(--bg-page)] p-6">
+          <div className="mx-auto max-w-2xl space-y-4">
+            <h1 className="text-2xl font-bold">App error</h1>
+            <p className="text-sm text-muted-foreground">
+              The page crashed while rendering. Please reload. If it keeps failing, send a screenshot of the error below
+              to support.
             </p>
-            <details className="mt-4 text-left bg-muted/40 rounded-lg p-3 text-xs">
-              <summary className="cursor-pointer font-mono">Error details (tap to expand)</summary>
-              <p className="mt-2 font-mono break-words">{this.state.message}</p>
+            <div className="rounded-lg border bg-muted/40 p-3 text-xs">
+              <p className="font-semibold mb-2">Error message</p>
+              <p className="font-mono break-words text-destructive">{this.state.message || "(no message)"}</p>
               {this.state.stack && (
-                <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap text-[10px] opacity-80">
-                  {this.state.stack}
-                </pre>
+                <>
+                  <p className="font-semibold mt-3 mb-1">Stack</p>
+                  <pre className="max-h-64 overflow-auto whitespace-pre-wrap text-[10px] opacity-80">
+                    {this.state.stack}
+                  </pre>
+                </>
               )}
-            </details>
-            <button
-              onClick={() => {
-                this.setState({ hasError: false, message: "", stack: "" });
-                location.reload();
-              }}
-              className="mt-4 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-            >
-              Reload
-            </button>
+              <p className="mt-3 text-[10px] text-muted-foreground">Build: {BUILD_TAG}</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, message: "", stack: "" });
+                  location.reload();
+                }}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
+              >
+                Reload
+              </button>
+              <a href="/" className="rounded-lg border px-4 py-2 text-sm font-medium">
+                Go home
+              </a>
+            </div>
           </div>
         </div>
       );
