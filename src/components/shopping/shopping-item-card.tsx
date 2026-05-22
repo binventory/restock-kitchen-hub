@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { Input } from "@/components/ui/input";
 import { Trash2, Minus, Plus } from "lucide-react";
 import type { ShoppingItem } from "@/lib/services/shopping-service";
 import { fetchFullProduct } from "@/lib/services/inventory-service";
@@ -16,7 +15,6 @@ interface Props {
 const SWIPE_THRESHOLD = 80;
 
 export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNeeded }: Props) {
-  const [bought, setBought] = useState(item.needed_quantity);
   const [offset, setOffset] = useState(0);
   const [confirming, setConfirming] = useState(false);
   const startX = useRef(0);
@@ -93,7 +91,7 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
         <input
           type="checkbox"
           checked={item.is_checked}
-          onChange={(e) => onCheck(item, e.target.checked, bought)}
+          onChange={(e) => onCheck(item, e.target.checked, item.needed_quantity)}
           className="h-5 w-5 mt-1"
           onClick={(e) => e.stopPropagation()}
         />
@@ -155,14 +153,6 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
             )}
           </div>
         </div>
-        <Input
-          type="number"
-          value={bought}
-          min={0}
-          onChange={(e) => setBought(Math.max(0, Number(e.target.value)))}
-          className="w-16 h-9 text-sm"
-          onClick={(e) => e.stopPropagation()}
-        />
       </div>
     </div>
   );
