@@ -110,6 +110,21 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => void openProduct()}>
           <p className="font-medium text-sm truncate">{name}</p>
           {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
+          <div className="flex gap-1 mt-0.5">
+            {item.product_id ? (
+              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                Global Database
+              </span>
+            ) : item.user_product_id ? (
+              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                User Item
+              </span>
+            ) : item.custom_text ? (
+              <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                Custom
+              </span>
+            ) : null}
+          </div>
           {item.item_note && <p className="text-xs text-green-700 dark:text-green-400 truncate">📝 {item.item_note}</p>}
           <div className="flex items-center gap-2 mt-1">
             {onChangeNeeded ? (

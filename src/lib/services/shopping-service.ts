@@ -13,14 +13,20 @@ export interface ShoppingItem {
   is_checked: boolean;
   added_automatically: boolean;
   added_by: string | null;
-  product: { id: string; name: string; brand: string | null; image_url: string | null } | null;
+  product: {
+    id: string;
+    name: string;
+    brand: string | null;
+    image_url: string | null;
+    barcode: string | null;
+  } | null;
 }
 
 export async function getShoppingList(householdId: string): Promise<ShoppingItem[]> {
   const { data, error } = await supabase
     .from("shopping_list")
     .select(
-      "*, products(id, name, brand, image_url), user_products(id, name, brand, image_url)",
+      "*, products(id, name, brand, image_url, barcode), user_products(id, name, brand, image_url, barcode)",
     )
     .eq("household_id", householdId)
     .order("created_at", { ascending: false });
