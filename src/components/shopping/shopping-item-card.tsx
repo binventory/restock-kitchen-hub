@@ -15,7 +15,7 @@ interface Props {
 
 const SWIPE_THRESHOLD = 80;
 
-export function ShoppingItemCard({ item, onCheck, onDelete, onSelect }: Props) {
+export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNeeded }: Props) {
   const [bought, setBought] = useState(item.needed_quantity);
   const [offset, setOffset] = useState(0);
   const [confirming, setConfirming] = useState(false);
