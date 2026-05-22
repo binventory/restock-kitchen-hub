@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Trash2 } from "lucide-react";
+import { Trash2, Minus, Plus } from "lucide-react";
 import type { ShoppingItem } from "@/lib/services/shopping-service";
 import { fetchFullProduct } from "@/lib/services/inventory-service";
 import type { ResolvedProduct } from "@/lib/types/product";
@@ -10,6 +10,7 @@ interface Props {
   onCheck: (item: ShoppingItem, checked: boolean, bought: number) => void;
   onDelete: (id: string) => void;
   onSelect?: (p: ResolvedProduct) => void;
+  onChangeNeeded?: (item: ShoppingItem, newQty: number) => void;
 }
 
 const SWIPE_THRESHOLD = 80;
