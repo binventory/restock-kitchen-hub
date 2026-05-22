@@ -10,6 +10,7 @@ import {
   acceptInvite,
   friendlyHouseholdError,
 } from "@/lib/services/household-service";
+import { HouseholdMembers } from "./HouseholdMembers";
 
 export function SettingsHouseholds() {
   const { t } = useTranslation();
