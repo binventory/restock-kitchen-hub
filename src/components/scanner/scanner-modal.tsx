@@ -40,12 +40,10 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
       BarcodeFormat.EAN_13,
       BarcodeFormat.EAN_8,
       BarcodeFormat.UPC_A,
-      BarcodeFormat.UPC_E,
-      BarcodeFormat.CODE_128,
     ]);
     hints.set(DecodeHintType.TRY_HARDER, true);
 
-    const reader = new BrowserMultiFormatReader(hints, 200);
+    const reader = new BrowserMultiFormatReader(hints, 500);
     readerRef.current = reader;
 
     const attach = async () => {
@@ -120,7 +118,7 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
         </div>
       </div>
       <p className="absolute top-1/2 left-0 right-0 -mt-44 text-center text-white text-sm opacity-75">
-        Point camera at barcode
+        Point camera at barcode. Move back slightly if blurry.
       </p>
       {loading && <p className="absolute bottom-32 left-0 right-0 text-center text-white text-sm">Opening camera...</p>}
       <div className="absolute bottom-6 left-0 right-0 px-4">

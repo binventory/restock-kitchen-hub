@@ -47,9 +47,9 @@ export function FAB() {
       const s = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { exact: "environment" },
-          width: { ideal: 1920, min: 1280 },
-          height: { ideal: 1080, min: 720 },
-          advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          advanced: [{ focusMode: "continuous" } as any],
         },
       });
       setStream(s);
@@ -66,8 +66,8 @@ export function FAB() {
           const s = await navigator.mediaDevices.getUserMedia({
             video: {
               facingMode: { ideal: "environment" },
-              width: { ideal: 1920, min: 1280 },
-              height: { ideal: 1080, min: 720 },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
             },
           });
           setStream(s);
