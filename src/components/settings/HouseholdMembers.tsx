@@ -68,7 +68,10 @@ export function HouseholdMembers({ householdId, onClose }: Props) {
           return (
             <li key={m.user_id} className="flex items-center justify-between gap-2 p-2 text-sm">
               <div className="min-w-0">
-                <p className="truncate font-mono text-xs">{m.user_id.slice(0, 8)}…{isMe && " (you)"}</p>
+                <p className="truncate text-sm">
+                  {m.email ?? `${m.user_id.slice(0, 8)}…`}
+                  {isMe && <span className="text-muted-foreground"> (you)</span>}
+                </p>
                 <span
                   className={`text-[10px] px-1.5 py-0.5 rounded ${
                     m.role === "admin"

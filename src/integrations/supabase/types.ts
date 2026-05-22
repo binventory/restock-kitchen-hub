@@ -1094,6 +1094,27 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           completed_at: string | null
@@ -1982,6 +2003,7 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { _token: string }; Returns: string }
+      can_see_profile: { Args: { _target: string }; Returns: boolean }
       cancel_own_order: { Args: { _order_id: string }; Returns: undefined }
       create_household: { Args: { _name: string }; Returns: string }
       delete_my_account: { Args: never; Returns: undefined }
