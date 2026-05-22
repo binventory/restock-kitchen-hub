@@ -46,9 +46,10 @@ export function FAB() {
       // iOS Safari requires this to be in the user gesture stack
       const s = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: "environment" },
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
+          facingMode: { exact: "environment" },
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
         },
       });
       setStream(s);
