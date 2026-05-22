@@ -18,6 +18,7 @@ export function SettingsHouseholds() {
   const { households, refresh } = useHousehold();
 
   const [inviteFor, setInviteFor] = useState<string | null>(null);
+  const [membersFor, setMembersFor] = useState<{ id: string; name: string } | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
