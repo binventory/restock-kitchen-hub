@@ -31,70 +31,70 @@ interface Opts {
 
 export async function getInventory(householdId: string, opts: Opts = {}): Promise<InventoryItem[]> {
   const { limit = 20, offset = 0, filter = "all", sort = "name", search = "" } = opts;
-  let q = supabase
-    .from("inventory")
-    .select(
-      "id, household_id, product_id, user_product_id, section_id, product_group_id, quantity, limit_threshold, unit, expiry_date, products(id, name, brand, image_url, barcode), user_products(id, name, brand, image_url, barcode)",
-    )
-    .eq("household_id", householdId);
+  try {
+    let q = supabase
+      .from("inventory")
+      .select(
+        "id, household_id, product_id, user_product_id, section_id, product_group_id, quantity, limit_threshold, unit, expiry_date, products(id, name, brand, image_url, barcode), user_products(id, name, brand, image_url, barcode)",
+      )
+      .eq("household_id", householdId);
 
-  if (filter === "out") q = q.eq("quantity", 0);
-  if (sort === "name") q = q.order("created_at", { ascending: true });
-  else if (sort === "qty_asc") q = q.order("quantity", { ascending: true });
-  q = q.range(offset, offset + limit - 1);
+    if (filter === "out") q = q.eq("quantity", 0);
+    if (sort === "name") q = q.order("created_at", { ascending: true });
+    else if (sort === "qty_asc") q = q.order("quantity", { ascending: true });
+    q = q.range(offset, offset + limit - 1);
 
-  const { data, error } = await q;
-  if (error || !data) return [];
-
-  // Defensive client-side de-dup: if two rows ever slip through with the
-  // same (household_id, product_id) or (household_id, user_product_id),
-  // collapse them so the UI does not show ghost duplicates while the
-  // server-side migration is rolling out.
-  const seen = new Map<string, (typeof data)[number]>();
-  for (const r of data) {
-    const key = r.product_id ? `p:${r.product_id}` : r.user_product_id ? `u:${r.user_product_id}` : `i:${r.id}`;
-    const existing = seen.get(key);
-    if (existing) {
-      existing.quantity = Number(existing.quantity) + Number(r.quantity);
-    } else {
-      seen.set(key, r);
+    const { data, error } = await q;
+    if (error || !data) {
+      if (error) console.error("[getInventory]", error);
+      return [];
     }
-  }
 
-  let items: InventoryItem[] = Array.from(seen.values()).map((r) => {
-    const prod = (r.products as InventoryItem["product"]) ?? (r.user_products as InventoryItem["product"]);
-    return {
-      id: r.id,
-      household_id: r.household_id,
-      product_id: r.product_id,
-      user_product_id: r.user_product_id,
-      section_id: r.section_id,
-      product_group_id: r.product_group_id,
-      quantity: Number(r.quantity),
-      limit_threshold: Number(r.limit_threshold),
-      unit: r.unit,
-      expiry_date: r.expiry_date,
-      product: prod,
-    };
-  });
+    // Defensive client-side de-dup: build a fresh accumulator instead
+    // of mutating the rows Supabase returned (which may be frozen).
+    const acc = new Map<string, InventoryItem>();
+    for (const r of data) {
+      const key = r.product_id ? `p:${r.product_id}` : r.user_product_id ? `u:${r.user_product_id}` : `i:${r.id}`;
+      const prod = (r.products as InventoryItem["product"]) ?? (r.user_products as InventoryItem["product"]);
+      const next: InventoryItem = {
+        id: r.id,
+        household_id: r.household_id,
+        product_id: r.product_id,
+        user_product_id: r.user_product_id,
+        section_id: r.section_id,
+        product_group_id: r.product_group_id,
+        quantity: Number(r.quantity),
+        limit_threshold: Number(r.limit_threshold),
+        unit: r.unit,
+        expiry_date: r.expiry_date,
+        product: prod,
+      };
+      const existing = acc.get(key);
+      if (existing) {
+        acc.set(key, { ...existing, quantity: existing.quantity + next.quantity });
+      } else {
+        acc.set(key, next);
+      }
+    }
 
-  if (search) {
-    const s = search.toLowerCase();
-    items = items.filter(
-      (i) => i.product?.name.toLowerCase().includes(s) || (i.product?.brand ?? "").toLowerCase().includes(s),
-    );
+    let items: InventoryItem[] = Array.from(acc.values());
+
+    if (search) {
+      const s = search.toLowerCase();
+      items = items.filter(
+        (i) => i.product?.name.toLowerCase().includes(s) || (i.product?.brand ?? "").toLowerCase().includes(s),
+      );
+    }
+    if (filter === "low") items = items.filter((i) => i.quantity <= i.limit_threshold && i.quantity > 0);
+    if (sort === "low_first") items.sort((a, b) => a.quantity - a.limit_threshold - (b.quantity - b.limit_threshold));
+    if (sort === "name") items.sort((a, b) => (a.product?.name ?? "").localeCompare(b.product?.name ?? ""));
+    return items;
+  } catch (e) {
+    console.error("[getInventory] unexpected", e);
+    return [];
   }
-  if (filter === "low") items = items.filter((i) => i.quantity <= i.limit_threshold && i.quantity > 0);
-  if (sort === "low_first") items.sort((a, b) => a.quantity - a.limit_threshold - (b.quantity - b.limit_threshold));
-  if (sort === "name") items.sort((a, b) => (a.product?.name ?? "").localeCompare(b.product?.name ?? ""));
-  return items;
 }
 
-/**
- * Fetch the full product row (all nutrition, allergen, halal fields)
- * from products or user_products. Used when opening Product Page
- * from Stock or Shopping list (where we only had partial data).
- */
 export async function fetchFullProduct(
   productId: string | null,
   userProductId: string | null,
@@ -205,15 +205,6 @@ export async function updateQuantity(itemId: string, newQty: number): Promise<vo
   } as never);
 }
 
-/**
- * Add product to inventory. If a row already exists for this
- * (household_id, product_id|user_product_id) — either because the user
- * already added it, or because a concurrent insert beat us — we
- * increment the existing row's quantity instead of creating a duplicate.
- * The unique indexes inventory_uniq_household_product /
- * inventory_uniq_household_user_product guarantee that a race cannot
- * produce two rows; on a 23505 conflict we re-fetch and update.
- */
 export async function addToInventory(
   householdId: string,
   ref: { product_id?: string; user_product_id?: string },
@@ -229,9 +220,6 @@ export async function addToInventory(
   const refId = ref.product_id ?? ref.user_product_id;
   if (!refId) return null;
 
-  // Try to find an existing row first (use limit(1) instead of
-  // maybeSingle() so we degrade gracefully if duplicates predate
-  // the dedupe migration).
   const { data: existingList } = await supabase
     .from("inventory")
     .select("id, quantity")
@@ -271,8 +259,6 @@ export async function addToInventory(
     .single();
 
   if (error) {
-    // Most likely a 23505 from the partial unique index — a parallel
-    // request won the race. Re-fetch and increment instead.
     const { data: retry } = await supabase
       .from("inventory")
       .select("id, quantity")
