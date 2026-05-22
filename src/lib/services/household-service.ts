@@ -71,6 +71,7 @@ export interface HouseholdMemberRow {
   household_id: string;
   role: HouseholdRole;
   is_default: boolean;
+  email: string | null;
 }
 
 async function assertAdmin(householdId: string, currentUserId: string): Promise<void> {
@@ -91,11 +92,20 @@ export async function getHouseholdMembers(householdId: string): Promise<Househol
     .select("user_id, household_id, role, is_default")
     .eq("household_id", householdId);
   if (error || !data) return [];
+
+  const ids = Array.from(new Set(data.map((r) => r.user_id)));
+  const emails = new Map<string, string | null>();
+  if (ids.length > 0) {
+    const { data: profs } = await supabase.from("profiles").select("id, email").in("id", ids);
+    for (const p of profs ?? []) emails.set(p.id as string, (p.email as string | null) ?? null);
+  }
+
   return data.map((r) => ({
     user_id: r.user_id,
     household_id: r.household_id,
     role: (r.role === "admin" ? "admin" : "member") as HouseholdRole,
     is_default: !!r.is_default,
+    email: emails.get(r.user_id) ?? null,
   }));
 }
 
