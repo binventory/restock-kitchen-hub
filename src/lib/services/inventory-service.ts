@@ -46,7 +46,22 @@ export async function getInventory(householdId: string, opts: Opts = {}): Promis
   const { data, error } = await q;
   if (error || !data) return [];
 
-  let items: InventoryItem[] = data.map((r) => {
+  // Defensive client-side de-dup: if two rows ever slip through with the
+  // same (household_id, product_id) or (household_id, user_product_id),
+  // collapse them so the UI does not show ghost duplicates while the
+  // server-side migration is rolling out.
+  const seen = new Map<string, (typeof data)[number]>();
+  for (const r of data) {
+    const key = r.product_id ? `p:${r.product_id}` : r.user_product_id ? `u:${r.user_product_id}` : `i:${r.id}`;
+    const existing = seen.get(key);
+    if (existing) {
+      existing.quantity = Number(existing.quantity) + Number(r.quantity);
+    } else {
+      seen.set(key, r);
+    }
+  }
+
+  let items: InventoryItem[] = Array.from(seen.values()).map((r) => {
     const prod = (r.products as InventoryItem["product"]) ?? (r.user_products as InventoryItem["product"]);
     return {
       id: r.id,
@@ -92,7 +107,6 @@ export async function fetchFullProduct(
   if (error || !raw) return null;
   const data = raw as Record<string, unknown>;
 
-  // products table has all nutrition fields, user_products has fewer
   return {
     id: String(data.id),
     type: productId ? "global" : "user",
@@ -133,10 +147,6 @@ export async function fetchFullProduct(
   };
 }
 
-/**
- * Match product name to a product_group via its keywords.
- * Used to auto-categorize inventory items.
- */
 async function autoDetectGroup(
   productName: string,
 ): Promise<{ section_id: string | null; product_group_id: string | null }> {
@@ -155,15 +165,9 @@ async function autoDetectGroup(
   return { section_id: null, product_group_id: null };
 }
 
-/**
- * Update inventory quantity. If new quantity drops to or below the
- * limit_threshold, automatically add the product to the household's
- * shopping list (unless it's already on the list unchecked).
- */
 export async function updateQuantity(itemId: string, newQty: number): Promise<void> {
   const safe = Math.max(0, newQty);
 
-  // Read the current row to know household, product, and limit
   const { data: row } = await supabase
     .from("inventory")
     .select("household_id, product_id, user_product_id, limit_threshold, quantity")
@@ -177,10 +181,8 @@ export async function updateQuantity(itemId: string, newQty: number): Promise<vo
   const wasAbove = Number(row.quantity) > limit;
   const nowBelow = safe <= limit;
 
-  // Only trigger auto-add when quantity CROSSES the limit going down
   if (!wasAbove || !nowBelow) return;
 
-  // Check if not already on shopping list (unchecked)
   const col = row.product_id ? "product_id" : "user_product_id";
   const refId = row.product_id ?? row.user_product_id;
   if (!refId) return;
@@ -193,9 +195,8 @@ export async function updateQuantity(itemId: string, newQty: number): Promise<vo
     .eq(col, refId)
     .maybeSingle();
 
-  if (existing) return; // Already there
+  if (existing) return;
 
-  // Auto-add to shopping list
   await supabase.from("shopping_list").insert({
     household_id: row.household_id,
     [col]: refId,
@@ -205,8 +206,13 @@ export async function updateQuantity(itemId: string, newQty: number): Promise<vo
 }
 
 /**
- * Add product to inventory. Auto-detects section/group from product name.
- * If already in inventory, increments quantity instead of duplicating.
+ * Add product to inventory. If a row already exists for this
+ * (household_id, product_id|user_product_id) — either because the user
+ * already added it, or because a concurrent insert beat us — we
+ * increment the existing row's quantity instead of creating a duplicate.
+ * The unique indexes inventory_uniq_household_product /
+ * inventory_uniq_household_user_product guarantee that a race cannot
+ * produce two rows; on a 23505 conflict we re-fetch and update.
  */
 export async function addToInventory(
   householdId: string,
@@ -223,21 +229,24 @@ export async function addToInventory(
   const refId = ref.product_id ?? ref.user_product_id;
   if (!refId) return null;
 
-  // Check if already in inventory
-  const { data: existing } = await supabase
+  // Try to find an existing row first (use limit(1) instead of
+  // maybeSingle() so we degrade gracefully if duplicates predate
+  // the dedupe migration).
+  const { data: existingList } = await supabase
     .from("inventory")
     .select("id, quantity")
     .eq("household_id", householdId)
     .eq(col, refId)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .limit(1);
 
-  if (existing) {
+  if (existingList && existingList.length > 0) {
+    const existing = existingList[0];
     const newQty = Number(existing.quantity) + quantity;
     await supabase.from("inventory").update({ quantity: newQty }).eq("id", existing.id);
     return existing.id;
   }
 
-  // Auto-detect section + group from product name
   let section_id: string | null = null;
   let product_group_id: string | null = null;
   if (productName) {
@@ -246,7 +255,7 @@ export async function addToInventory(
     product_group_id = detected.product_group_id;
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("inventory")
     .insert({
       household_id: householdId,
@@ -260,6 +269,26 @@ export async function addToInventory(
     })
     .select("id")
     .single();
+
+  if (error) {
+    // Most likely a 23505 from the partial unique index — a parallel
+    // request won the race. Re-fetch and increment instead.
+    const { data: retry } = await supabase
+      .from("inventory")
+      .select("id, quantity")
+      .eq("household_id", householdId)
+      .eq(col, refId)
+      .order("created_at", { ascending: true })
+      .limit(1);
+    if (retry && retry.length > 0) {
+      const winner = retry[0];
+      const newQty = Number(winner.quantity) + quantity;
+      await supabase.from("inventory").update({ quantity: newQty }).eq("id", winner.id);
+      return winner.id;
+    }
+    console.error("[addToInventory]", error);
+    return null;
+  }
   return data?.id ?? null;
 }
 
