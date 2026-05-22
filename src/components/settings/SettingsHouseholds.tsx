@@ -113,6 +113,12 @@ export function SettingsHouseholds() {
               <button onClick={() => setInviteFor(h.id)} className="rounded-md border px-2 py-1 text-xs hover:bg-muted">
                 Invite member
               </button>
+              <button
+                onClick={() => setMembersFor({ id: h.id, name: h.name })}
+                className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+              >
+                Members
+              </button>
               {canLeave && !h.is_default && (
                 <button
                   onClick={() => setLeaveFor({ id: h.id, name: h.name })}
