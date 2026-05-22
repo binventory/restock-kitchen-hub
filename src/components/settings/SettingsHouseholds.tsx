@@ -249,6 +249,12 @@ export function SettingsHouseholds() {
           </div>
         </Modal>
       )}
+
+      {membersFor && (
+        <Modal title={`Members — ${membersFor.name}`} onClose={() => setMembersFor(null)}>
+          <HouseholdMembers householdId={membersFor.id} onClose={() => setMembersFor(null)} />
+        </Modal>
+      )}
     </section>
   );
 }
