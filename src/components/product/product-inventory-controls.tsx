@@ -71,6 +71,8 @@ export function ProductInventoryControls({ product, householdId }: Props) {
     const n = Math.max(0, row.quantity + d);
     setRow({ ...row, quantity: n });
     await updateQuantity(row.id, n);
+    void qc.invalidateQueries({ queryKey: qk.inventory(householdId) });
+    void qc.invalidateQueries({ queryKey: qk.shopping(householdId) });
     setBusy(false);
   };
 
