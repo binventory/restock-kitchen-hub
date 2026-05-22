@@ -153,14 +153,6 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
             )}
           </div>
         </div>
-        <Input
-          type="number"
-          value={bought}
-          min={0}
-          onChange={(e) => setBought(Math.max(0, Number(e.target.value)))}
-          className="w-16 h-9 text-sm"
-          onClick={(e) => e.stopPropagation()}
-        />
       </div>
     </div>
   );
