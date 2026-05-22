@@ -8,6 +8,7 @@ import {
   setDefaultHousehold,
   leaveHousehold,
   acceptInvite,
+  friendlyHouseholdError,
 } from "@/lib/services/household-service";
 
 export function SettingsHouseholds() {
@@ -45,7 +46,11 @@ export function SettingsHouseholds() {
       .single();
     setInviteBusy(false);
     if (error) {
-      setInviteError(error.message);
+      // Never surface raw DB errors — they can leak constraint/table
+      // names and internal paths. Log to console for developers and
+      // show a generic message to the user.
+      console.error("[invite create]", error);
+      setInviteError("Could not send invite. Please check the email and try again.");
       return;
     }
     setInviteToken(data?.token ?? null);
@@ -75,7 +80,8 @@ export function SettingsHouseholds() {
       setJoinToken("");
       await refresh();
     } catch (e) {
-      setJoinError(e instanceof Error ? e.message : "Invalid token");
+      console.error("[join household]", e);
+      setJoinError(friendlyHouseholdError(e, "Invalid or used invite token."));
     } finally {
       setJoinBusy(false);
     }
@@ -95,7 +101,10 @@ export function SettingsHouseholds() {
             </span>
             <div className="flex items-center gap-2">
               {!h.is_default && (
-                <button onClick={() => makeDefault(h.id)} className="rounded-md border px-2 py-1 text-xs hover:bg-muted">
+                <button
+                  onClick={() => makeDefault(h.id)}
+                  className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+                >
                   {t("household.setDefault")}
                 </button>
               )}
@@ -130,7 +139,11 @@ export function SettingsHouseholds() {
               <p className="text-sm text-green-600">Invite sent</p>
               <p className="text-xs text-muted-foreground">Share this token with the invitee:</p>
               <div className="flex gap-2">
-                <input readOnly value={inviteToken} className="flex-1 rounded-md border bg-muted px-2 py-1.5 text-xs font-mono" />
+                <input
+                  readOnly
+                  value={inviteToken}
+                  className="flex-1 rounded-md border bg-muted px-2 py-1.5 text-xs font-mono"
+                />
                 <button
                   onClick={() => navigator.clipboard.writeText(inviteToken)}
                   className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
@@ -138,7 +151,10 @@ export function SettingsHouseholds() {
                   Copy
                 </button>
               </div>
-              <button onClick={closeInvite} className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">
+              <button
+                onClick={closeInvite}
+                className="w-full rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
+              >
                 Done
               </button>
             </div>
@@ -153,7 +169,9 @@ export function SettingsHouseholds() {
               />
               {inviteError && <p className="text-xs text-destructive">{inviteError}</p>}
               <div className="flex gap-2">
-                <button onClick={closeInvite} className="flex-1 rounded-lg border px-3 py-2 text-sm">Cancel</button>
+                <button onClick={closeInvite} className="flex-1 rounded-lg border px-3 py-2 text-sm">
+                  Cancel
+                </button>
                 <button
                   disabled={!inviteEmail || inviteBusy}
                   onClick={submitInvite}
@@ -172,7 +190,9 @@ export function SettingsHouseholds() {
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">You will lose access to this household.</p>
             <div className="flex gap-2">
-              <button onClick={() => setLeaveFor(null)} className="flex-1 rounded-lg border px-3 py-2 text-sm">Cancel</button>
+              <button onClick={() => setLeaveFor(null)} className="flex-1 rounded-lg border px-3 py-2 text-sm">
+                Cancel
+              </button>
               <button
                 onClick={confirmLeave}
                 className="flex-1 rounded-lg bg-destructive px-3 py-2 text-sm font-semibold text-destructive-foreground"
@@ -185,7 +205,13 @@ export function SettingsHouseholds() {
       )}
 
       {joinOpen && (
-        <Modal title="Join a household" onClose={() => { setJoinOpen(false); setJoinError(null); }}>
+        <Modal
+          title="Join a household"
+          onClose={() => {
+            setJoinOpen(false);
+            setJoinError(null);
+          }}
+        >
           <div className="space-y-3">
             <input
               value={joinToken}
@@ -195,7 +221,15 @@ export function SettingsHouseholds() {
             />
             {joinError && <p className="text-xs text-destructive">{joinError}</p>}
             <div className="flex gap-2">
-              <button onClick={() => { setJoinOpen(false); setJoinError(null); }} className="flex-1 rounded-lg border px-3 py-2 text-sm">Cancel</button>
+              <button
+                onClick={() => {
+                  setJoinOpen(false);
+                  setJoinError(null);
+                }}
+                className="flex-1 rounded-lg border px-3 py-2 text-sm"
+              >
+                Cancel
+              </button>
               <button
                 disabled={!joinToken || joinBusy}
                 onClick={submitJoin}
@@ -214,7 +248,10 @@ export function SettingsHouseholds() {
 function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-xl border bg-[var(--bg-elevated)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="w-full max-w-sm rounded-xl border bg-[var(--bg-elevated)] p-4 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="mb-3 font-semibold">{title}</h3>
         {children}
       </div>
