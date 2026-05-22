@@ -98,7 +98,7 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black">
-      <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+      <video ref={videoRef} autoPlay muted playsInline style={{ objectFit: "cover" }} className="h-full w-full object-cover" />
       {flash && <div className="absolute inset-0 bg-green-500/40 animate-pulse pointer-events-none" />}
       <button
         onClick={onClose}
