@@ -32,56 +32,24 @@ export function FAB() {
 
   const handleClose = () => {
     setOpen(false);
-    // Stop the stream when modal closes
     stream?.getTracks().forEach((t) => t.stop());
     setStream(null);
   };
 
-  // CRITICAL: getUserMedia must be called directly in the
-  // click handler to stay within the iOS Safari user gesture
-  // context. Do NOT put it in useEffect or behind setTimeout.
   const onClick = async () => {
     try {
-      // Request camera immediately in click handler
-      // iOS Safari requires this to be in the user gesture stack
       const s = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { exact: "environment" },
+          facingMode: { ideal: "environment" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          advanced: [{ focusMode: "continuous" } as any],
         },
       });
       setStream(s);
       setOpen(true);
     } catch (err) {
-      const name = err instanceof Error ? err.name : "";
-      if (name === "NotAllowedError" || name === "PermissionDeniedError") {
-        toast.error("Camera access denied. Please enable camera in your browser settings.");
-      } else if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-        toast.error("No camera found on this device.");
-      } else if (name === "OverconstrainedError" || name === "ConstraintNotSatisfiedError") {
-        // Fallback: no rear camera or constraints unsupported — try with ideal
-        try {
-          const s = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: { ideal: "environment" },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-          });
-          setStream(s);
-          setOpen(true);
-        } catch {
-          setStream(null);
-          setOpen(true);
-        }
-      } else {
-        // Any other error: open modal in manual entry mode instead
-        // Do NOT permanently block camera — it might work next time
-        setStream(null);
-        setOpen(true);
-      }
+      toast.error("Camera access failed. Please ensure camera permissions are granted.");
+      setOpen(true); // Open modal anyway to allow manual entry
     }
   };
 
