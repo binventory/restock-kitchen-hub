@@ -163,6 +163,7 @@ export function ShoppingScreen() {
                 onCheck={onCheck}
                 onDelete={onDelete}
                 onSelect={setSelectedProduct}
+                onChangeNeeded={onChangeNeeded}
               />
             ))}
           </div>
