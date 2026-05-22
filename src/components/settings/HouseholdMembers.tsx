@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   getHouseholdMembers,
@@ -6,6 +7,7 @@ import {
   removeMember,
   type HouseholdMemberRow,
 } from "@/lib/services/household-service";
+import { qk } from "@/lib/query-keys";
 import { toast } from "sonner";
 
 interface Props {
@@ -15,17 +17,16 @@ interface Props {
 
 export function HouseholdMembers({ householdId, onClose }: Props) {
   const { user } = useAuth();
-  const [members, setMembers] = useState<HouseholdMemberRow[]>([]);
+  const qc = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const rows = await getHouseholdMembers(householdId);
-    setMembers(rows);
-  }, [householdId]);
+  const { data: members = [] } = useQuery<HouseholdMemberRow[]>({
+    queryKey: qk.householdMembers(householdId),
+    queryFn: () => getHouseholdMembers(householdId),
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const invalidate = () =>
+    void qc.invalidateQueries({ queryKey: qk.householdMembers(householdId) });
 
   const me = members.find((m) => m.user_id === user?.id);
   const isAdmin = me?.role === "admin";
@@ -36,7 +37,7 @@ export function HouseholdMembers({ householdId, onClose }: Props) {
     try {
       const next = m.role === "admin" ? "member" : "admin";
       await updateMemberRole(householdId, m.user_id, user.id, next);
-      await load();
+      invalidate();
       toast.success(`Role updated to ${next}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -51,7 +52,7 @@ export function HouseholdMembers({ householdId, onClose }: Props) {
     setBusy(m.user_id);
     try {
       await removeMember(householdId, m.user_id, user.id);
-      await load();
+      invalidate();
       toast.success("Member removed");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
