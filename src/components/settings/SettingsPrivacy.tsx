@@ -17,7 +17,8 @@ export function SettingsPrivacy() {
       await requestDataExport(user.id);
       setMsg("Export requested. We'll email you when ready.");
     } catch (e) {
-      setMsg((e as Error).message);
+      console.error("[data export]", e);
+      setMsg("Could not request an export right now. Please try again later.");
     } finally {
       setBusy(false);
     }
@@ -30,7 +31,8 @@ export function SettingsPrivacy() {
       await deleteOwnAccount();
       await signOut();
     } catch (e) {
-      setMsg((e as Error).message);
+      console.error("[delete account]", e);
+      setMsg("Could not delete your account. Please contact support.");
       setBusy(false);
     }
   };
