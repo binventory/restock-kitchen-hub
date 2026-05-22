@@ -11,14 +11,21 @@ export function AuthScreen() {
     setBusy(provider);
     setError(null);
     try {
-      const result = (await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin })) as { redirected?: boolean; error?: unknown };
+      const result = (await lovable.auth.signInWithOAuth(provider, { redirect_uri: window.location.origin })) as {
+        redirected?: boolean;
+        error?: unknown;
+      };
       if (result.redirected) return;
       if (result.error) {
-        const msg = result.error instanceof Error ? result.error.message : String(result.error);
-        setError(msg || "Sign-in failed. Please try again.");
+        // Log full details to the developer console; show a generic
+        // message to the user. Raw provider error text can include
+        // request URLs, scopes or internal IDs.
+        console.error("[oauth sign-in]", result.error);
+        setError("Sign-in failed. Please try again.");
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
+      console.error("[oauth sign-in]", e);
+      setError("Sign-in failed. Please try again.");
     } finally {
       setBusy(null);
     }
@@ -27,7 +34,9 @@ export function AuthScreen() {
   return (
     <div className="grid min-h-screen place-items-center bg-[var(--bg-page)] p-6">
       <div className="w-full max-w-sm rounded-2xl border bg-[var(--bg-elevated)] p-8 shadow-sm text-center">
-        <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-foreground text-2xl font-bold">R</div>
+        <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-foreground text-2xl font-bold">
+          R
+        </div>
         <h1 className="text-2xl font-bold">{t("auth.welcome")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{t("auth.subtitle")}</p>
         <div className="mt-6 space-y-2">
