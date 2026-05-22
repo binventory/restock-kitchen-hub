@@ -14,6 +14,12 @@ interface Props {
 export function ScannerModal({ stream, onScan, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<InstanceType<typeof BrowserMultiFormatReader> | null>(null);
+  // ZXing's decode callback can fire several times in rapid succession
+  // before reader.reset() takes effect — once per decoded frame. Without
+  // this guard, a single physical scan would call onScan() 2–4 times,
+  // each one launching a fresh lookup + product page and producing
+  // duplicate Stock entries.
+  const decoded = useRef(false);
   const [loading, setLoading] = useState(true);
   const [manual, setManual] = useState(false);
   const [manualVal, setManualVal] = useState("");
@@ -21,15 +27,14 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
   const [torchOn, setTorchOn] = useState(false);
 
   useEffect(() => {
-    // If no stream was provided, go straight to manual mode
+    decoded.current = false;
+
     if (!stream) {
       setLoading(false);
       setManual(true);
       return;
     }
 
-    // Stream already obtained in FAB click handler
-    // Just attach it to the video element and start decoding
     const hints = new Map();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [
       BarcodeFormat.EAN_13,
@@ -51,13 +56,13 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
         }
         setLoading(false);
 
-        reader.decodeFromStream(stream, videoRef.current!, (result, _err) => {
-          if (result) {
-            navigator.vibrate?.(100);
-            setFlash(true);
-            reader.reset();
-            setTimeout(() => onScan(result.getText()), 200);
-          }
+        reader.decodeFromStream(stream, videoRef.current!, (result) => {
+          if (!result || decoded.current) return;
+          decoded.current = true;
+          navigator.vibrate?.(100);
+          setFlash(true);
+          reader.reset();
+          setTimeout(() => onScan(result.getText()), 200);
         });
       } catch {
         setLoading(false);
@@ -69,9 +74,14 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
 
     return () => {
       reader.reset();
-      // Do NOT stop the stream here — FAB owns it and stops it on close
     };
   }, [stream, onScan]);
+
+  const submitManual = () => {
+    if (!manualVal || decoded.current) return;
+    decoded.current = true;
+    onScan(manualVal);
+  };
 
   const toggleTorch = async () => {
     const track = stream?.getVideoTracks()[0];
@@ -120,11 +130,11 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
               autoFocus
               value={manualVal}
               onChange={(e) => setManualVal(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && manualVal && onScan(manualVal)}
+              onKeyDown={(e) => e.key === "Enter" && submitManual()}
               placeholder="Enter barcode"
               className="bg-white"
             />
-            <Button onClick={() => manualVal && onScan(manualVal)}>Go</Button>
+            <Button onClick={submitManual}>Go</Button>
           </div>
         ) : (
           <button
