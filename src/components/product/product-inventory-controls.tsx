@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import type { ResolvedProduct } from "@/lib/types/product";
 import { addToInventory, updateQuantity } from "@/lib/services/inventory-service";
 import { suggestLimit } from "@/lib/services/smart-limits-service";
+import { qk } from "@/lib/query-keys";
 import { useHousehold } from "@/contexts/HouseholdProvider";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
@@ -14,6 +16,7 @@ interface Props {
   product: ResolvedProduct;
   householdId: string;
 }
+
 
 interface InvRow {
   id: string;
@@ -25,6 +28,7 @@ interface InvRow {
 export function ProductInventoryControls({ product, householdId }: Props) {
   const { households } = useHousehold();
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [row, setRow] = useState<InvRow | null>(null);
   const [addQty, setAddQty] = useState(1);
   const [addLimit, setAddLimit] = useState(1);
@@ -67,6 +71,8 @@ export function ProductInventoryControls({ product, householdId }: Props) {
     const n = Math.max(0, row.quantity + d);
     setRow({ ...row, quantity: n });
     await updateQuantity(row.id, n);
+    void qc.invalidateQueries({ queryKey: qk.inventory(householdId) });
+    void qc.invalidateQueries({ queryKey: qk.shopping(householdId) });
     setBusy(false);
   };
 
@@ -111,6 +117,7 @@ export function ProductInventoryControls({ product, householdId }: Props) {
           unit: "pieces",
         });
         toast.success("Added to stock");
+        void qc.invalidateQueries({ queryKey: qk.inventory(householdId) });
       } else {
         toast.error("Could not add to stock");
       }

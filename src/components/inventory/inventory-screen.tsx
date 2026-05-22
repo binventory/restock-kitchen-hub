@@ -1,8 +1,10 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHousehold } from "@/contexts/HouseholdProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { getInventory, type InventoryItem } from "@/lib/services/inventory-service";
+import { getInventory } from "@/lib/services/inventory-service";
+import { qk } from "@/lib/query-keys";
 import { LowStockBar } from "./low-stock-bar";
 import { InventoryControls } from "./inventory-controls";
 import { InventoryListView } from "./inventory-list-view";
@@ -15,50 +17,30 @@ const PAGE_SIZE = 20;
 export function InventoryScreen() {
   const { current } = useHousehold();
   const { t } = useTranslation();
-  const [items, setItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"name" | "qty_asc" | "low_first">("name");
   const [filter, setFilter] = useState<"all" | "low" | "out">("all");
   const [view, setView] = useState<"list" | "grouped">("list");
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [selectedProduct, setSelectedProduct] = useState<ResolvedProduct | null>(null);
 
-  const load = useCallback(
-    async (reset = true) => {
-      if (!current) return;
-      setLoading(true);
-
-      const currentOffset = reset ? 0 : offset;
-
-      const data = await getInventory(current.id, {
-        limit: PAGE_SIZE,
-        offset: currentOffset,
-        search,
-        sort,
-        filter,
-      });
-
-      setItems((prev) => {
-        if (reset) return data;
-        const combined = [...prev, ...data];
-        const uniqueMap = new Map(combined.map((item) => [item.id, item]));
-        return Array.from(uniqueMap.values());
-      });
-
-      setHasMore(data.length === PAGE_SIZE);
-      setOffset(currentOffset + PAGE_SIZE);
-      setLoading(false);
-    },
-    [current, search, sort, filter, offset],
-  );
-
+  // Reset pagination when filters change
   useEffect(() => {
-    void load(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.id, search, sort, filter]);
+    setPageSize(PAGE_SIZE);
+  }, [search, sort, filter, current?.id]);
 
+  const params = { search, sort, filter, pageSize };
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: current ? qk.inventoryList(current.id, params) : ["inventory-noop"],
+    queryFn: () =>
+      getInventory(current!.id, { limit: pageSize, offset: 0, search, sort, filter }),
+    enabled: !!current,
+  });
+
+  const hasMore = items.length === pageSize;
+
+  // Realtime: invalidate all inventory queries for this household on any change
   useEffect(() => {
     if (!current) return;
     const ch = supabase
@@ -71,22 +53,26 @@ export function InventoryScreen() {
           table: "inventory",
           filter: `household_id=eq.${current.id}`,
         },
-        () => void load(true),
+        () => {
+          void qc.invalidateQueries({ queryKey: qk.inventory(current.id) });
+        },
       )
       .subscribe();
     const onVis = () => {
-      if (document.visibilityState === "visible") void load(true);
+      if (document.visibilityState === "visible") {
+        void qc.invalidateQueries({ queryKey: qk.inventory(current.id) });
+      }
     };
     document.addEventListener("visibilitychange", onVis);
     return () => {
       void supabase.removeChannel(ch);
       document.removeEventListener("visibilitychange", onVis);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.id]);
+  }, [current, qc]);
 
   if (!current) return null;
-  const empty = !loading && items.length === 0 && !search && filter === "all";
+  const empty = !isLoading && items.length === 0 && !search && filter === "all";
+  const invalidate = () => void qc.invalidateQueries({ queryKey: qk.inventory(current.id) });
 
   return (
     <div className="mx-auto max-w-3xl p-4 space-y-4">
@@ -111,12 +97,12 @@ export function InventoryScreen() {
       ) : view === "list" ? (
         <InventoryListView
           items={items}
-          onLoadMore={hasMore ? () => void load(false) : undefined}
+          onLoadMore={hasMore ? () => setPageSize((p) => p + PAGE_SIZE) : undefined}
           onSelect={setSelectedProduct}
-          onDeleted={() => void load(true)}
+          onDeleted={invalidate}
         />
       ) : (
-        <InventoryGroupedView items={items} onSelect={setSelectedProduct} onDeleted={() => void load(true)} />
+        <InventoryGroupedView items={items} onSelect={setSelectedProduct} onDeleted={invalidate} />
       )}
       {selectedProduct && <ProductPage product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
     </div>

@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
@@ -13,6 +14,7 @@ import {
 } from "@/lib/services/shopping-service";
 import { updateQuantity, addToInventory } from "@/lib/services/inventory-service";
 import { updateShoppingListQuantity } from "@/lib/services/shopping-list-service";
+import { qk } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ShoppingItemCard } from "./shopping-item-card";
@@ -26,32 +28,34 @@ export function ShoppingScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { current } = useHousehold();
-  const [items, setItems] = useState<ShoppingItem[]>([]);
+  const qc = useQueryClient();
   const [showDone, setShowDone] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [online, setOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
   const [selectedProduct, setSelectedProduct] = useState<ResolvedProduct | null>(null);
 
-  const load = useCallback(async () => {
-    if (!current) return;
-    if (!navigator.onLine) {
-      const cached = localStorage.getItem(cacheKey(current.id));
-      if (cached) setItems(JSON.parse(cached));
-      return;
-    }
-    const data = await getShoppingList(current.id);
-    setItems(data);
-    localStorage.setItem(cacheKey(current.id), JSON.stringify(data));
-  }, [current]);
+  const { data: items = [] } = useQuery<ShoppingItem[]>({
+    queryKey: current ? qk.shopping(current.id) : ["shopping-noop"],
+    queryFn: async () => {
+      if (!navigator.onLine) {
+        const cached = localStorage.getItem(cacheKey(current!.id));
+        return cached ? (JSON.parse(cached) as ShoppingItem[]) : [];
+      }
+      const data = await getShoppingList(current!.id);
+      localStorage.setItem(cacheKey(current!.id), JSON.stringify(data));
+      return data;
+    },
+    enabled: !!current,
+  });
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const invalidate = () => {
+    if (current) void qc.invalidateQueries({ queryKey: qk.shopping(current.id) });
+  };
 
   useEffect(() => {
     const on = () => {
       setOnline(true);
-      void load();
+      invalidate();
     };
     const off = () => setOnline(false);
     window.addEventListener("online", on);
@@ -60,12 +64,13 @@ export function ShoppingScreen() {
       window.removeEventListener("online", on);
       window.removeEventListener("offline", off);
     };
-  }, [load]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current?.id]);
 
   useEffect(() => {
     if (!current) return;
     const ch = supabase
-      .channel(`household:${current.id}`)
+      .channel(`shopping:${current.id}`)
       .on(
         "postgres_changes",
         {
@@ -75,19 +80,18 @@ export function ShoppingScreen() {
           filter: `household_id=eq.${current.id}`,
         },
         () => {
-          void load();
+          void qc.invalidateQueries({ queryKey: qk.shopping(current.id) });
         },
       )
       .subscribe();
     return () => {
       void supabase.removeChannel(ch);
     };
-  }, [current, load]);
+  }, [current, qc]);
 
   const onCheck = async (item: ShoppingItem, checked: boolean, bought: number) => {
     if (checked) {
       await setChecked(item, true, bought);
-      // add to inventory
       if (item.product_id || item.user_product_id) {
         const col = item.product_id ? "product_id" : "user_product_id";
         const refId = (item.product_id ?? item.user_product_id)!;
@@ -107,6 +111,7 @@ export function ShoppingScreen() {
             "pieces",
             item.product?.name,
           );
+        void qc.invalidateQueries({ queryKey: qk.inventory(item.household_id) });
       }
       toast.success("✅ Added to stock");
     } else {
@@ -121,26 +126,33 @@ export function ShoppingScreen() {
             .eq(col, refId)
             .maybeSingle();
           if (inv) await updateQuantity(inv.id, Math.max(0, Number(inv.quantity) - item.bought_quantity));
+          void qc.invalidateQueries({ queryKey: qk.inventory(item.household_id) });
         }
       }
       await setChecked(item, false);
     }
+    invalidate();
   };
 
   const onDelete = async (id: string) => {
     await deleteShoppingItem(id);
-    void load();
+    invalidate();
   };
 
   const onChangeNeeded = async (item: ShoppingItem, newQty: number) => {
-    setItems((prev) =>
-      newQty <= 0
-        ? prev.filter((p) => p.id !== item.id)
-        : prev.map((p) => (p.id === item.id ? { ...p, needed_quantity: newQty } : p)),
-    );
+    // Optimistic update via cache
+    if (current) {
+      qc.setQueryData<ShoppingItem[]>(qk.shopping(current.id), (prev) =>
+        !prev
+          ? prev
+          : newQty <= 0
+            ? prev.filter((p) => p.id !== item.id)
+            : prev.map((p) => (p.id === item.id ? { ...p, needed_quantity: newQty } : p)),
+      );
+    }
     await updateShoppingListQuantity(item.id, item.household_id, newQty);
+    invalidate();
   };
-
 
   if (!current) return null;
   const toBuy = items.filter((i) => !i.is_checked);
@@ -176,7 +188,14 @@ export function ShoppingScreen() {
               <ChevronDown className={`h-4 w-4 transition ${showDone ? "" : "-rotate-90"}`} />
               Done ({done.length})
             </button>
-            <Button size="sm" variant="ghost" onClick={() => void clearChecked(current.id)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={async () => {
+                await clearChecked(current.id);
+                invalidate();
+              }}
+            >
               Clear done
             </Button>
           </div>
@@ -201,7 +220,16 @@ export function ShoppingScreen() {
       >
         <Plus className="h-6 w-6" />
       </button>
-      {addOpen && user && <AddItemModal householdId={current.id} userId={user.id} onClose={() => setAddOpen(false)} />}
+      {addOpen && user && (
+        <AddItemModal
+          householdId={current.id}
+          userId={user.id}
+          onClose={() => {
+            setAddOpen(false);
+            invalidate();
+          }}
+        />
+      )}
       {selectedProduct && <ProductPage product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
     </div>
   );

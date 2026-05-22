@@ -36,7 +36,7 @@ export async function acceptInvite(token: string): Promise<string> {
     console.error("[accept invite]", error);
     throw new Error(friendlyHouseholdError(error, "Could not accept the invite."));
   }
-  return data as string;
+  return data as unknown as string;
 }
 
 export async function setDefaultHousehold(userId: string, householdId: string) {
