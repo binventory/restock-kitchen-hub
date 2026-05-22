@@ -1,5 +1,4 @@
 import { useState, useRef } from "react";
-import { Input } from "@/components/ui/input";
 import { Trash2, Minus, Plus } from "lucide-react";
 import type { ShoppingItem } from "@/lib/services/shopping-service";
 import { fetchFullProduct } from "@/lib/services/inventory-service";
