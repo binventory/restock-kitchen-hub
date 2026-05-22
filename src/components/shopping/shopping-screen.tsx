@@ -132,6 +132,16 @@ export function ShoppingScreen() {
     void load();
   };
 
+  const onChangeNeeded = async (item: ShoppingItem, newQty: number) => {
+    setItems((prev) =>
+      newQty <= 0
+        ? prev.filter((p) => p.id !== item.id)
+        : prev.map((p) => (p.id === item.id ? { ...p, needed_quantity: newQty } : p)),
+    );
+    await updateShoppingListQuantity(item.id, item.household_id, newQty);
+  };
+
+
   if (!current) return null;
   const toBuy = items.filter((i) => !i.is_checked);
   const done = items.filter((i) => i.is_checked);
