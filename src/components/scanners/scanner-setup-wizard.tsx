@@ -7,9 +7,17 @@ import { useHousehold } from "@/contexts/HouseholdProvider";
 import QRCode from "qrcode";
 import { toast } from "sonner";
 
-interface Props { onClose: () => void; }
+interface Props {
+  onClose: () => void;
+}
 
-interface Step { id: string; step_number: number; step_name: string; description: string | null; qr_payload: string; }
+interface Step {
+  id: string;
+  step_number: number;
+  step_name: string;
+  description: string | null;
+  qr_payload: string;
+}
 
 export function ScannerSetupWizard({ onClose }: Props) {
   const { current } = useHousehold();
@@ -46,20 +54,29 @@ export function ScannerSetupWizard({ onClose }: Props) {
       .insert({ household_id: current.id, name, location })
       .select("id")
       .single();
-    if (error || !data) return toast.error("Failed");
+    if (error || !data) {
+      console.error("[scanner create]", error);
+      return toast.error("Could not create scanner. Please try again.");
+    }
     const { data: tok, error: tErr } = await supabase.rpc("get_scanner_token", {
       _scanner_id: data.id as string,
     });
-    if (tErr || !tok) return toast.error("Failed");
+    if (tErr || !tok) {
+      console.error("[scanner token]", tErr);
+      return toast.error("Could not generate scanner token. Please try again.");
+    }
     setToken(tok as string);
     setStep(2);
   };
 
   const buildFinal = async () => {
-    const url = await supabase
-      .from("app_settings").select("value").eq("key", "scanner_endpoint_url").maybeSingle();
+    const url = await supabase.from("app_settings").select("value").eq("key", "scanner_endpoint_url").maybeSingle();
     const endpoint = url.data?.value ?? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan`;
-    const payload = `CONFIG:${ssid},${pwd},${endpoint},${token}`;
+    // Structured JSON payload — commas, quotes or newlines inside the
+    // WiFi credentials are escaped by JSON.stringify and cannot shift
+    // the endpoint or token fields. Firmware must JSON.parse() the
+    // body that follows the "CONFIG:" prefix.
+    const payload = `CONFIG:${JSON.stringify({ ssid, pwd, endpoint, token })}`;
     const qr = await QRCode.toDataURL(payload, { width: 320 });
     setFinalQr(qr);
     setStep(4);
@@ -71,13 +88,19 @@ export function ScannerSetupWizard({ onClose }: Props) {
         <h2 className="text-lg font-bold">Set up scanner — Step {step}/5</h2>
         {step === 1 && (
           <div className="space-y-2">
-            <Input placeholder="Scanner name (e.g. Kitchen bin)" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              placeholder="Scanner name (e.g. Kitchen bin)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
             <Input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} />
-            <Button onClick={() => void createScanner()} disabled={!name}>Next</Button>
+            <Button onClick={() => void createScanner()} disabled={!name}>
+              Next
+            </Button>
           </div>
         )}
-        {step === 2 && (
-          configSteps.length === 0 ? (
+        {step === 2 &&
+          (configSteps.length === 0 ? (
             <div className="space-y-2 text-sm">
               <p>No configuration steps set up yet. Ask your administrator to configure scanner steps.</p>
               <Button onClick={() => setStep(3)}>Skip</Button>
@@ -87,22 +110,34 @@ export function ScannerSetupWizard({ onClose }: Props) {
               <p className="text-sm font-semibold">{configSteps[configIdx]?.step_name}</p>
               <p className="text-xs text-muted-foreground">{configSteps[configIdx]?.description}</p>
               {qrUrl && <img src={qrUrl} alt="QR" className="mx-auto" />}
-              <Button onClick={() => {
-                if (configIdx < configSteps.length - 1) setConfigIdx(configIdx + 1);
-                else setStep(3);
-              }}>Next step →</Button>
+              <Button
+                onClick={() => {
+                  if (configIdx < configSteps.length - 1) setConfigIdx(configIdx + 1);
+                  else setStep(3);
+                }}
+              >
+                Next step →
+              </Button>
             </div>
-          )
-        )}
+          ))}
         {step === 3 && (
           <div className="space-y-2">
             <Input placeholder="WiFi SSID" value={ssid} onChange={(e) => setSsid(e.target.value)} />
             <div className="flex gap-2">
-              <Input type={showPwd ? "text" : "password"} placeholder="WiFi password" value={pwd} onChange={(e) => setPwd(e.target.value)} />
-              <Button variant="outline" onClick={() => setShowPwd(!showPwd)}>{showPwd ? "Hide" : "Show"}</Button>
+              <Input
+                type={showPwd ? "text" : "password"}
+                placeholder="WiFi password"
+                value={pwd}
+                onChange={(e) => setPwd(e.target.value)}
+              />
+              <Button variant="outline" onClick={() => setShowPwd(!showPwd)}>
+                {showPwd ? "Hide" : "Show"}
+              </Button>
             </div>
             <p className="text-xs text-muted-foreground">Stored only in the QR code, not on our servers.</p>
-            <Button onClick={() => void buildFinal()} disabled={!ssid}>Next</Button>
+            <Button onClick={() => void buildFinal()} disabled={!ssid}>
+              Next
+            </Button>
           </div>
         )}
         {step === 4 && finalQr && (
@@ -116,7 +151,9 @@ export function ScannerSetupWizard({ onClose }: Props) {
         {step === 5 && (
           <div className="space-y-2 text-center">
             <p className="text-sm">Setup complete!</p>
-            <Button onClick={onClose} className="w-full">Done</Button>
+            <Button onClick={onClose} className="w-full">
+              Done
+            </Button>
           </div>
         )}
       </DialogContent>
