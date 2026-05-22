@@ -45,7 +45,7 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
     ]);
     hints.set(DecodeHintType.TRY_HARDER, true);
 
-    const reader = new BrowserMultiFormatReader(hints, 100);
+    const reader = new BrowserMultiFormatReader(hints, 200);
     readerRef.current = reader;
 
     const attach = async () => {
