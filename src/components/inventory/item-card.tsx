@@ -117,6 +117,9 @@ export function ItemCard({ item, onSelect, onDeleted }: Props) {
                 Low
               </span>
             )}
+            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+              {item.product_id ? "Global Database" : "User Item"}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>

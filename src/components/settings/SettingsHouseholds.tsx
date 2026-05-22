@@ -10,6 +10,7 @@ import {
   acceptInvite,
   friendlyHouseholdError,
 } from "@/lib/services/household-service";
+import { HouseholdMembers } from "./HouseholdMembers";
 
 export function SettingsHouseholds() {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ export function SettingsHouseholds() {
   const { households, refresh } = useHousehold();
 
   const [inviteFor, setInviteFor] = useState<string | null>(null);
+  const [membersFor, setMembersFor] = useState<{ id: string; name: string } | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteToken, setInviteToken] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
@@ -110,6 +112,12 @@ export function SettingsHouseholds() {
               )}
               <button onClick={() => setInviteFor(h.id)} className="rounded-md border px-2 py-1 text-xs hover:bg-muted">
                 Invite member
+              </button>
+              <button
+                onClick={() => setMembersFor({ id: h.id, name: h.name })}
+                className="rounded-md border px-2 py-1 text-xs hover:bg-muted"
+              >
+                Members
               </button>
               {canLeave && !h.is_default && (
                 <button
@@ -239,6 +247,12 @@ export function SettingsHouseholds() {
               </button>
             </div>
           </div>
+        </Modal>
+      )}
+
+      {membersFor && (
+        <Modal title={`Members — ${membersFor.name}`} onClose={() => setMembersFor(null)}>
+          <HouseholdMembers householdId={membersFor.id} onClose={() => setMembersFor(null)} />
         </Modal>
       )}
     </section>

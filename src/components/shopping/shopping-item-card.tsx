@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
-import { Trash2 } from "lucide-react";
+import { Trash2, Minus, Plus } from "lucide-react";
 import type { ShoppingItem } from "@/lib/services/shopping-service";
 import { fetchFullProduct } from "@/lib/services/inventory-service";
 import type { ResolvedProduct } from "@/lib/types/product";
@@ -10,11 +10,12 @@ interface Props {
   onCheck: (item: ShoppingItem, checked: boolean, bought: number) => void;
   onDelete: (id: string) => void;
   onSelect?: (p: ResolvedProduct) => void;
+  onChangeNeeded?: (item: ShoppingItem, newQty: number) => void;
 }
 
 const SWIPE_THRESHOLD = 80;
 
-export function ShoppingItemCard({ item, onCheck, onDelete, onSelect }: Props) {
+export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNeeded }: Props) {
   const [bought, setBought] = useState(item.needed_quantity);
   const [offset, setOffset] = useState(0);
   const [confirming, setConfirming] = useState(false);
@@ -111,7 +112,27 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect }: Props) {
           {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
           {item.item_note && <p className="text-xs text-green-700 dark:text-green-400 truncate">📝 {item.item_note}</p>}
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs bg-muted px-2 py-0.5 rounded">Need {item.needed_quantity}</span>
+            {onChangeNeeded ? (
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => onChangeNeeded(item, Math.max(0, item.needed_quantity - 1))}
+                  className="h-7 w-7 grid place-items-center rounded-full bg-muted hover:bg-muted-foreground/20"
+                  aria-label="Decrease needed quantity"
+                >
+                  <Minus className="h-3 w-3" />
+                </button>
+                <span className="min-w-[2ch] text-center text-xs font-medium">{item.needed_quantity}</span>
+                <button
+                  onClick={() => onChangeNeeded(item, item.needed_quantity + 1)}
+                  className="h-7 w-7 grid place-items-center rounded-full bg-primary text-primary-foreground"
+                  aria-label="Increase needed quantity"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <span className="text-xs bg-muted px-2 py-0.5 rounded">Need {item.needed_quantity}</span>
+            )}
             {item.added_automatically && (
               <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded">
                 Auto
