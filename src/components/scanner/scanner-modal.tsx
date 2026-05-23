@@ -1,32 +1,31 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { X, Zap, Keyboard } from "lucide-react";
-import * as ZXing from "@zxing/library";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } = ZXing;
-
 interface Props {
-  stream: MediaStream | null;
   onScan: (barcode: string) => void;
   onClose: () => void;
 }
 
-export function ScannerModal({ stream, onScan, onClose }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+const READER_ID = "restock-html5-qrcode-reader";
+
+type TorchFeature = {
+  isSupported: () => boolean;
+  apply: (on: boolean) => Promise<void>;
+};
+
+export function ScannerModal({ onScan, onClose }: Props) {
+  const scannerRef = useRef<Html5Qrcode | null>(null);
   const decoded = useRef(false);
-  const readerRef = useRef<InstanceType<typeof BrowserMultiFormatReader> | null>(null);
   const [manual, setManual] = useState(false);
   const [manualVal, setManualVal] = useState("");
   const [torchOn, setTorchOn] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
-  const [zoom, setZoom] = useState(1);
-  const [zoomMin, setZoomMin] = useState(1);
-  const [zoomMax, setZoomMax] = useState(1);
-  const [zoomStep, setZoomStep] = useState(0.1);
   const [showHint, setShowHint] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Beep on successful scan (no audio file needed)
   const beep = useCallback(() => {
     try {
       const ctx = new (window.AudioContext ||
@@ -48,67 +47,76 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
     }
   }, []);
 
-  // Detect camera capabilities once the stream is ready
-  useEffect(() => {
-    if (!stream) return;
-    const track = stream.getVideoTracks()[0];
-    if (!track) return;
-    const caps = track.getCapabilities?.() as
-      | {
-          torch?: boolean;
-          zoom?: { min: number; max: number; step: number };
-        }
-      | undefined;
-    if (caps?.torch !== undefined) setTorchSupported(true);
-    if (caps?.zoom) {
-      setZoomMin(caps.zoom.min);
-      setZoomMax(caps.zoom.max);
-      setZoomStep(caps.zoom.step || 0.1);
-      setZoom(caps.zoom.min);
-    }
-  }, [stream]);
-
-  // Start decoding when stream attaches
   useEffect(() => {
     decoded.current = false;
-    if (!stream) {
-      setManual(true);
-      return;
-    }
+    const html5Qr = new Html5Qrcode(READER_ID, {
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.ITF,
+      ],
+      useBarCodeDetectorIfSupported: true,
+      verbose: false,
+    });
 
-    const hints = new Map();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-      BarcodeFormat.EAN_13,
-      BarcodeFormat.EAN_8,
-      BarcodeFormat.UPC_A,
-      BarcodeFormat.UPC_E,
-      BarcodeFormat.CODE_128,
-    ]);
-    hints.set(DecodeHintType.TRY_HARDER, true);
+    scannerRef.current = html5Qr;
 
-    const reader = new BrowserMultiFormatReader(hints, 200);
-    readerRef.current = reader;
-
-    const attach = async () => {
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        try {
-          await videoRef.current.play();
-        } catch {
-          // ignore play() rejection on tab switch
-        }
-      }
-      reader.decodeFromStream(stream, videoRef.current!, (result) => {
-        if (!result || decoded.current) return;
-        decoded.current = true;
-        beep();
-        navigator.vibrate?.(100);
-        reader.reset();
-        onScan(result.getText());
-      });
+    const onSuccess = (text: string) => {
+      if (decoded.current) return;
+      decoded.current = true;
+      beep();
+      navigator.vibrate?.(100);
+      void html5Qr.stop().finally(() => onScan(text));
     };
 
-    void attach();
+    const onError = () => {};
+
+    const qrboxFn = (vpW: number, vpH: number) => {
+      const minEdge = Math.min(vpW, vpH);
+      const width = Math.floor(minEdge * 0.8);
+      const height = Math.floor(width * 0.5);
+      return { width, height };
+    };
+
+    html5Qr
+      .start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: qrboxFn,
+          aspectRatio: window.innerWidth / window.innerHeight,
+          disableFlip: false,
+          videoConstraints: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920, min: 1280 },
+            height: { ideal: 1080, min: 720 },
+            advanced: [
+              { focusMode: "continuous" },
+              { focusMode: "auto" },
+            ] as unknown as MediaTrackConstraintSet[],
+          },
+        },
+        onSuccess,
+        onError,
+      )
+      .then(() => {
+        const cap = (
+          html5Qr.getRunningTrackCameraCapabilities?.() as
+            | { torchFeature?: () => TorchFeature }
+            | undefined
+        )?.torchFeature?.();
+        if (cap?.isSupported?.()) setTorchSupported(true);
+      })
+      .catch((err: unknown) => {
+        const msg =
+          err instanceof Error ? err.message : "Could not open camera";
+        setError(msg);
+        setManual(true);
+      });
 
     const hintTimer = setTimeout(() => {
       if (!decoded.current) setShowHint(true);
@@ -116,92 +124,62 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
 
     return () => {
       clearTimeout(hintTimer);
-      reader.reset();
-      readerRef.current = null;
+      const s = scannerRef.current;
+      if (s) {
+        try {
+          if (s.getState() === 2) {
+            void s.stop().catch(() => {});
+          }
+        } catch {
+          // already stopped
+        }
+      }
+      scannerRef.current = null;
     };
-  }, [stream, onScan, beep]);
+  }, [onScan, beep]);
 
   const toggleTorch = async () => {
-    const track = stream?.getVideoTracks()[0];
-    if (!track) return;
+    const s = scannerRef.current;
+    if (!s) return;
     try {
-      await track.applyConstraints({
-        advanced: [
-          { torch: !torchOn } as unknown as MediaTrackConstraintSet,
-        ],
-      });
-      setTorchOn(!torchOn);
+      const cap = (
+        s.getRunningTrackCameraCapabilities?.() as
+          | { torchFeature?: () => TorchFeature }
+          | undefined
+      )?.torchFeature?.();
+      if (cap?.isSupported?.()) {
+        await cap.apply(!torchOn);
+        setTorchOn(!torchOn);
+      }
     } catch (e) {
       console.error(e);
     }
   };
 
-  const applyZoom = async (val: number) => {
-    setZoom(val);
-    const track = stream?.getVideoTracks()[0];
-    if (!track) return;
-    try {
-      await track.applyConstraints({
-        advanced: [{ zoom: val } as unknown as MediaTrackConstraintSet],
-      });
-    } catch {
-      // zoom not supported
-    }
-  };
-
-  const onTapFocus = async (e: React.MouseEvent) => {
-    const track = stream?.getVideoTracks()[0];
-    if (!track) return;
-    const caps = track.getCapabilities?.() as
-      | { pointsOfInterest?: boolean }
-      | undefined;
-    if (!caps?.pointsOfInterest) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-    try {
-      await track.applyConstraints({
-        advanced: [
-          {
-            pointsOfInterest: [{ x, y }],
-            focusMode: "single-shot",
-          } as unknown as MediaTrackConstraintSet,
-        ],
-      });
-    } catch {
-      // ignore
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-black">
-      <video
-        ref={videoRef}
-        autoPlay
-        muted
-        playsInline
-        onClick={onTapFocus}
-        className="h-full w-full"
-        style={{ objectFit: "cover" }}
-      />
+      <div id={READER_ID} className="h-full w-full" />
 
-      {/* Top controls */}
       <button
         onClick={onClose}
+        aria-label="Close"
         className="absolute top-4 start-4 h-10 w-10 grid place-items-center rounded-full bg-black/50 text-white z-10"
       >
         <X />
       </button>
+
       {torchSupported && (
         <button
-          onClick={toggleTorch}
-          className="absolute top-4 end-4 h-10 w-10 grid place-items-center rounded-full bg-black/50 text-white z-10"
+          onClick={() => void toggleTorch()}
+          aria-label="Torch"
+          className={`absolute top-4 end-4 h-10 w-10 grid place-items-center rounded-full text-white z-10 ${
+            torchOn ? "bg-yellow-500" : "bg-black/50"
+          }`}
         >
-          <Zap className={torchOn ? "text-yellow-400" : ""} />
+          <Zap />
         </button>
       )}
 
-      {/* Scan frame with corner brackets */}
       <div className="absolute inset-0 grid place-items-center pointer-events-none">
         <div className="relative h-40 w-64">
           <div className="absolute top-0 left-0 h-6 w-6 border-t-4 border-l-4 border-green-500 rounded-tl" />
@@ -215,8 +193,7 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
         </div>
       </div>
 
-      {/* Hint after 3 seconds */}
-      {showHint && (
+      {showHint && !error && (
         <div className="absolute top-20 left-0 right-0 grid place-items-center pointer-events-none">
           <div className="bg-black/70 text-white text-sm px-4 py-2 rounded-full">
             Hold steady · 10-15 cm away · good light
@@ -224,24 +201,14 @@ export function ScannerModal({ stream, onScan, onClose }: Props) {
         </div>
       )}
 
-      {/* Zoom slider when supported */}
-      {zoomMax > zoomMin && (
-        <div className="absolute bottom-32 left-0 right-0 px-6 flex items-center gap-3 text-white">
-          <span className="text-xs">1×</span>
-          <input
-            type="range"
-            min={zoomMin}
-            max={zoomMax}
-            step={zoomStep}
-            value={zoom}
-            onChange={(e) => void applyZoom(Number(e.target.value))}
-            className="flex-1 accent-green-500"
-          />
-          <span className="text-xs w-10 text-right">{zoom.toFixed(1)}×</span>
+      {error && (
+        <div className="absolute top-20 left-0 right-0 grid place-items-center pointer-events-none px-4">
+          <div className="bg-red-600/90 text-white text-sm px-4 py-2 rounded-full">
+            {error}
+          </div>
         </div>
       )}
 
-      {/* Bottom controls */}
       <div className="absolute bottom-10 left-0 right-0 p-4">
         {manual ? (
           <div className="flex gap-2 bg-white p-2 rounded-lg">
