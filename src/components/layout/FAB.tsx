@@ -37,19 +37,67 @@ export function FAB() {
   };
 
   const onClick = async () => {
-    try {
-      const s = await navigator.mediaDevices.getUserMedia({
+    const tryConstraints = async (
+      constraints: MediaStreamConstraints,
+    ): Promise<MediaStream | null> => {
+      try {
+        return await navigator.mediaDevices.getUserMedia(constraints);
+      } catch {
+        return null;
+      }
+    };
+
+    // Tier 1: Best — back camera, 1080p, continuous focus
+    let s = await tryConstraints({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1920, min: 1280 },
+        height: { ideal: 1080, min: 720 },
+        frameRate: { ideal: 30, min: 15 },
+        advanced: [
+          { focusMode: "continuous" },
+          { focusMode: "auto" },
+        ] as unknown as MediaTrackConstraintSet[],
+      },
+    });
+
+    // Tier 2: Mid — back camera, 720p
+    if (!s) {
+      s = await tryConstraints({
         video: {
           facingMode: { ideal: "environment" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
       });
+    }
+
+    // Tier 3: Anything — let the browser pick
+    if (!s) {
+      s = await tryConstraints({ video: true });
+    }
+
+    if (s) {
+      const track = s.getVideoTracks()[0];
+      const caps = track?.getCapabilities?.() as
+        | { focusMode?: string[] }
+        | undefined;
+      if (caps?.focusMode?.includes("continuous")) {
+        try {
+          await track.applyConstraints({
+            advanced: [
+              { focusMode: "continuous" } as unknown as MediaTrackConstraintSet,
+            ],
+          });
+        } catch {
+          // ignore — device doesn't support
+        }
+      }
       setStream(s);
       setOpen(true);
-    } catch (err) {
-      toast.error("Camera access failed. Please ensure camera permissions are granted.");
-      setOpen(true); // Open modal anyway to allow manual entry
+    } else {
+      toast.error("Camera access failed. Please grant camera permission.");
+      setOpen(true); // manual entry fallback
     }
   };
 
