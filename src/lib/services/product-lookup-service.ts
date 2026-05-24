@@ -83,7 +83,7 @@ export async function lookupBarcode(
     }
   }
 
-  // Step 2: global
+  // Step 2: global products
   const { data: global } = await supabase
     .from("products")
     .select("*")
@@ -92,7 +92,7 @@ export async function lookupBarcode(
     .maybeSingle();
   if (global) return rowToResolved(global, "global", "products");
 
-  // Step 3: user_products in household
+  // Step 3: user_products from any household member
   const { data: hm } = await supabase
     .from("household_members")
     .select("user_id")
@@ -108,17 +108,49 @@ export async function lookupBarcode(
     if (up) return rowToResolved(up, "user", "user_products");
   }
 
-  // Step 4: OpenFoodFacts (ingest server-side to avoid client self-approval)
-  const ingest = await ingestOpenFoodFactsProduct({ data: { barcode } });
-  if (ingest?.product) {
-    return rowToResolved(
-      ingest.product as unknown as Record<string, unknown>,
-      "global",
-      "products",
-    );
+  // Step 4: OpenFoodFacts
+  // 4a. Try server-side ingest first.
+  try {
+    const ingest = await ingestOpenFoodFactsProduct({
+      data: { barcode },
+    });
+    if (ingest?.product) {
+      return rowToResolved(
+        ingest.product as unknown as Record<string, unknown>,
+        "global",
+        "products",
+      );
+    }
+  } catch {
+    // Server function unavailable — fall through.
   }
+
+  // 4b. Client-side fallback using the "openfoodfacts insert"
+  //     RLS policy on products.
   const off = await fetchFromOpenFoodFacts(barcode);
   if (off) {
+    const insertRow = {
+      ...off,
+      source: "openfoodfacts" as const,
+      is_approved: true,
+      submitted_by_user_id: null,
+    };
+
+    const { data: inserted } = await supabase
+      .from("products")
+      .insert(insertRow)
+      .select("*")
+      .single();
+    if (inserted) return rowToResolved(inserted, "global", "products");
+
+    const { data: existing } = await supabase
+      .from("products")
+      .select("*")
+      .eq("barcode", barcode)
+      .eq("is_approved", true)
+      .maybeSingle();
+    if (existing) return rowToResolved(existing, "global", "products");
+
     return {
       id: `off_${barcode}`,
       type: "global" as const,
@@ -127,5 +159,6 @@ export async function lookupBarcode(
       ...off,
     };
   }
+
   return null;
 }
