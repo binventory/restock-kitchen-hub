@@ -84,26 +84,85 @@ export function ProductInventoryControls({ product, householdId }: Props) {
       let ref: { product_id?: string; user_product_id?: string };
 
       if (isTempProduct) {
-        // Product came from OpenFoodFacts but DB insert failed earlier.
-        // Save it to user_products first to get a real UUID.
-        const { data: saved, error } = await supabase
-          .from("user_products")
-          .insert({
-            barcode: product.barcode,
-            name: product.name,
-            brand: product.brand,
-            image_url: product.image_url,
-            user_id: user.id,
-            submission_status: "pending_approval",
-          })
+        // Final retry: put the product in the global catalog
+        // before giving up and saving as a pending user product.
+        const insertRow = {
+          barcode: product.barcode,
+          name: product.name,
+          brand: product.brand,
+          generic_name: product.generic_name,
+          category: product.category,
+          image_url: product.image_url,
+          quantity_value: product.quantity_value,
+          quantity_unit: product.quantity_unit,
+          calories_100g: product.calories_100g,
+          fat_100g: product.fat_100g,
+          saturated_fat_100g: product.saturated_fat_100g,
+          carbohydrates_100g: product.carbohydrates_100g,
+          sugars_100g: product.sugars_100g,
+          proteins_100g: product.proteins_100g,
+          salt_100g: product.salt_100g,
+          fiber_100g: product.fiber_100g,
+          serving_size_g: product.serving_size_g,
+          calories_serving: product.calories_serving,
+          nutriscore: product.nutriscore,
+          ecoscore: product.ecoscore,
+          nova_group: product.nova_group,
+          nutrient_levels: product.nutrient_levels,
+          allergens: product.allergens,
+          traces_allergens: product.traces_allergens,
+          labels: product.labels,
+          is_vegan: product.is_vegan,
+          is_vegetarian: product.is_vegetarian,
+          is_gluten_free: product.is_gluten_free,
+          has_palm_oil: product.has_palm_oil,
+          halal_certified: product.halal_certified,
+          ingredients_text: product.ingredients_text,
+          ingredients_analysis: product.ingredients_analysis,
+          available_stores: product.available_stores,
+          source: "openfoodfacts" as const,
+          is_approved: true,
+          submitted_by_user_id: null,
+        };
+
+        const { data: globalInsert } = await supabase
+          .from("products")
+          .insert(insertRow)
           .select("id")
           .single();
-        if (error || !saved) {
-          toast.error("Could not save product");
-          setBusy(false);
-          return;
+
+        if (globalInsert) {
+          ref = { product_id: globalInsert.id };
+        } else {
+          const { data: existing } = await supabase
+            .from("products")
+            .select("id")
+            .eq("barcode", product.barcode)
+            .eq("is_approved", true)
+            .maybeSingle();
+          if (existing) {
+            ref = { product_id: existing.id };
+          } else {
+            const { data: saved, error: savedErr } = await supabase
+              .from("user_products")
+              .insert({
+                barcode: product.barcode,
+                name: product.name,
+                brand: product.brand,
+                image_url: product.image_url,
+                user_id: user.id,
+                submission_status: "pending_approval",
+              })
+              .select("id")
+              .single();
+            if (savedErr || !saved) {
+              toast.error("Could not save product");
+              setBusy(false);
+              return;
+            }
+            ref = { user_product_id: saved.id };
+          }
         }
-        ref = { user_product_id: saved.id };
       } else {
         ref = product.tableSource === "products" ? { product_id: product.id } : { user_product_id: product.id };
       }
