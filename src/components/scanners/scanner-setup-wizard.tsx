@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Eye, EyeOff, Check } from "lucide-react";
+import { Eye, EyeOff, Check, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useHousehold } from "@/contexts/HouseholdProvider";
@@ -26,7 +26,9 @@ type Step = "name" | "reset" | "mode" | "ttl" | "config" | "test";
 
 const SSID_HISTORY_KEY = "restock_scanner_ssid_history";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? "";
-const DEFAULT_SCAN_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/scan` : "";
+const DEFAULT_SCAN_URL = SUPABASE_URL
+  ? `${SUPABASE_URL}/functions/v1/scan`
+  : "";
 
 function getSsidHistory(): string[] {
   try {
@@ -56,6 +58,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
   const { current } = useHousehold();
 
   const [step, setStep] = useState<Step>("name");
+  const [busy, setBusy] = useState(false);
   const [, setScannerId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
 
@@ -76,25 +79,49 @@ export function ScannerSetupWizard({ onClose }: Props) {
   const ssid = ssidSelect === "__custom__" ? ssidCustom.trim() : ssidSelect;
 
   const createScanner = async () => {
+    if (busy) return;
     if (!name.trim() || !user || !current) {
       toast.error("Name your scanner first");
       return;
     }
-    const { data, error } = await supabase
+    setBusy(true);
+
+    const { data: inserted, error: insertErr } = await supabase
       .from("scanners")
       .insert({
         household_id: current.id,
         name: name.trim(),
         location: location.trim() || null,
       })
-      .select("id, token")
+      .select("id")
       .single();
-    if (error || !data) {
-      toast.error("Could not create scanner");
+
+    if (insertErr || !inserted) {
+      toast.error(insertErr?.message ?? "Could not create scanner");
+      setBusy(false);
       return;
     }
-    setScannerId(data.id);
-    setToken(data.token as string);
+
+    const { data: tokenData, error: tokenErr } = await supabase.rpc(
+      "get_scanner_token",
+      { _scanner_id: inserted.id },
+    );
+
+    if (tokenErr || !tokenData) {
+      const msg = tokenErr?.message ?? "Could not retrieve scanner token";
+      toast.error(
+        msg.includes("Only household owners")
+          ? "Only the household owner can set up a scanner."
+          : msg,
+      );
+      await supabase.from("scanners").delete().eq("id", inserted.id);
+      setBusy(false);
+      return;
+    }
+
+    setScannerId(inserted.id);
+    setToken(tokenData as string);
+    setBusy(false);
     setStep("reset");
   };
 
@@ -146,6 +173,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Kitchen bin"
+                disabled={busy}
               />
             </div>
             <div className="space-y-1">
@@ -154,10 +182,22 @@ export function ScannerSetupWizard({ onClose }: Props) {
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Under the sink"
+                disabled={busy}
               />
             </div>
-            <Button className="w-full" onClick={() => void createScanner()}>
-              Continue
+            <Button
+              className="w-full"
+              disabled={busy}
+              onClick={() => void createScanner()}
+            >
+              {busy ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Continue"
+              )}
             </Button>
           </div>
         )}
