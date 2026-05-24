@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, Zap, Keyboard } from "lucide-react";
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { X, Zap, Keyboard, SwitchCamera } from "lucide-react";
+import { Html5Qrcode } from "html5-qrcode";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -9,12 +9,53 @@ interface Props {
   onClose: () => void;
 }
 
+interface CameraDevice {
+  id: string;
+  label: string;
+}
+
 const READER_ID = "restock-html5-qrcode-reader";
+const SAVED_CAMERA_KEY = "restock_selected_camera_id";
 
 type TorchFeature = {
   isSupported: () => boolean;
   apply: (on: boolean) => Promise<void>;
 };
+
+function pickBackCamera(cameras: CameraDevice[]): CameraDevice {
+  if (cameras.length === 0) throw new Error("No cameras available");
+
+  const saved = localStorage.getItem(SAVED_CAMERA_KEY);
+  if (saved) {
+    const match = cameras.find((c) => c.id === saved);
+    if (match) return match;
+  }
+
+  const back = cameras.find((c) => {
+    const l = c.label.toLowerCase();
+    if (l.includes("ultra") || l.includes("wide angle") || l.includes("0.5")) {
+      return false;
+    }
+    return (
+      l.includes("back") ||
+      l.includes("rear") ||
+      l.includes("environment")
+    );
+  });
+  if (back) return back;
+
+  const notFront = cameras.find((c) => {
+    const l = c.label.toLowerCase();
+    return !l.includes("front") && !l.includes("user") && !l.includes("face");
+  });
+  if (notFront) return notFront;
+
+  return cameras[0];
+}
+
+function isMobile(): boolean {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
 
 export function ScannerModal({ onScan, onClose }: Props) {
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -25,6 +66,9 @@ export function ScannerModal({ onScan, onClose }: Props) {
   const [torchSupported, setTorchSupported] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cameras, setCameras] = useState<CameraDevice[]>([]);
+  const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
+  const [showCameraPicker, setShowCameraPicker] = useState(false);
 
   const beep = useCallback(() => {
     try {
@@ -47,76 +91,95 @@ export function ScannerModal({ onScan, onClose }: Props) {
     }
   }, []);
 
-  useEffect(() => {
-    decoded.current = false;
-    const html5Qr = new Html5Qrcode(READER_ID, {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.ITF,
-      ],
-      useBarCodeDetectorIfSupported: true,
-      verbose: false,
-    });
+  const startScanning = useCallback(
+    async (cameraId: string) => {
+      const html5Qr = scannerRef.current;
+      if (!html5Qr) return;
 
-    scannerRef.current = html5Qr;
+      decoded.current = false;
 
-    const onSuccess = (text: string) => {
-      if (decoded.current) return;
-      decoded.current = true;
-      beep();
-      navigator.vibrate?.(100);
-      void html5Qr.stop().finally(() => onScan(text));
-    };
+      const onSuccess = (text: string) => {
+        if (decoded.current) return;
+        decoded.current = true;
+        beep();
+        navigator.vibrate?.(100);
+        void html5Qr.stop().finally(() => onScan(text));
+      };
 
-    const onError = () => {};
+      const onError = () => {
+        // suppress per-frame "not found" errors
+      };
 
-    const qrboxFn = (vpW: number, vpH: number) => {
-      const minEdge = Math.min(vpW, vpH);
-      const width = Math.floor(minEdge * 0.8);
-      const height = Math.floor(width * 0.5);
-      return { width, height };
-    };
-
-    html5Qr
-      .start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: qrboxFn,
-          aspectRatio: window.innerWidth / window.innerHeight,
-          disableFlip: false,
-          videoConstraints: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920, min: 1280 },
-            height: { ideal: 1080, min: 720 },
-            advanced: [
-              { focusMode: "continuous" },
-              { focusMode: "auto" },
-            ] as unknown as MediaTrackConstraintSet[],
+      try {
+        await html5Qr.start(
+          cameraId,
+          {
+            fps: 15,
+            qrbox: undefined,
+            aspectRatio: isMobile() ? 16 / 9 : 4 / 3,
+            disableFlip: false,
           },
-        },
-        onSuccess,
-        onError,
-      )
-      .then(() => {
-        const cap = (
-          html5Qr.getRunningTrackCameraCapabilities?.() as
-            | { torchFeature?: () => TorchFeature }
-            | undefined
-        )?.torchFeature?.();
-        if (cap?.isSupported?.()) setTorchSupported(true);
-      })
-      .catch((err: unknown) => {
+          onSuccess,
+          onError,
+        );
+        setActiveCameraId(cameraId);
+        localStorage.setItem(SAVED_CAMERA_KEY, cameraId);
+        setError(null);
+
+        try {
+          const cap = (
+            html5Qr.getRunningTrackCameraCapabilities?.() as
+              | { torchFeature?: () => TorchFeature }
+              | undefined
+          )?.torchFeature?.();
+          if (cap?.isSupported?.()) setTorchSupported(true);
+          else setTorchSupported(false);
+        } catch {
+          setTorchSupported(false);
+        }
+      } catch (err) {
         const msg =
-          err instanceof Error ? err.message : "Could not open camera";
+          err instanceof Error ? err.message : "Could not start camera";
         setError(msg);
         setManual(true);
-      });
+      }
+    },
+    [onScan, beep],
+  );
+
+  useEffect(() => {
+    decoded.current = false;
+
+    const html5Qr = new Html5Qrcode(READER_ID, {
+      verbose: false,
+      experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true,
+      },
+    } as unknown as ConstructorParameters<typeof Html5Qrcode>[1]);
+    scannerRef.current = html5Qr;
+
+    const init = async () => {
+      try {
+        const list = await Html5Qrcode.getCameras();
+        if (list.length === 0) {
+          setError("No cameras found on this device");
+          setManual(true);
+          return;
+        }
+        setCameras(list);
+        const picked = pickBackCamera(list);
+        await startScanning(picked.id);
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Camera permission denied. Please allow camera access.";
+        setError(msg);
+        setManual(true);
+      }
+    };
+
+    void init();
 
     const hintTimer = setTimeout(() => {
       if (!decoded.current) setShowHint(true);
@@ -136,7 +199,23 @@ export function ScannerModal({ onScan, onClose }: Props) {
       }
       scannerRef.current = null;
     };
-  }, [onScan, beep]);
+  }, [startScanning]);
+
+  const switchCamera = async (cameraId: string) => {
+    if (cameraId === activeCameraId) {
+      setShowCameraPicker(false);
+      return;
+    }
+    setShowCameraPicker(false);
+    const s = scannerRef.current;
+    if (!s) return;
+    try {
+      if (s.getState() === 2) await s.stop();
+    } catch {
+      // ignore
+    }
+    await startScanning(cameraId);
+  };
 
   const toggleTorch = async () => {
     const s = scannerRef.current;
@@ -180,6 +259,35 @@ export function ScannerModal({ onScan, onClose }: Props) {
         </button>
       )}
 
+      {cameras.length > 1 && (
+        <>
+          <button
+            onClick={() => setShowCameraPicker(!showCameraPicker)}
+            aria-label="Switch camera"
+            className="absolute top-4 end-16 h-10 w-10 grid place-items-center rounded-full bg-black/50 text-white z-10"
+          >
+            <SwitchCamera />
+          </button>
+          {showCameraPicker && (
+            <div className="absolute top-16 end-4 w-64 max-h-80 overflow-y-auto bg-black/90 rounded-lg z-20 py-2">
+              {cameras.map((cam) => (
+                <button
+                  key={cam.id}
+                  onClick={() => void switchCamera(cam.id)}
+                  className={`block w-full text-left px-4 py-2 text-sm text-white hover:bg-white/10 ${
+                    cam.id === activeCameraId
+                      ? "border-l-4 border-green-500"
+                      : ""
+                  }`}
+                >
+                  {cam.label || `Camera ${cameras.indexOf(cam) + 1}`}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
       <div className="absolute inset-0 grid place-items-center pointer-events-none">
         <div className="relative h-40 w-64">
           <div className="absolute top-0 left-0 h-6 w-6 border-t-4 border-l-4 border-green-500 rounded-tl" />
@@ -194,9 +302,9 @@ export function ScannerModal({ onScan, onClose }: Props) {
       </div>
 
       {showHint && !error && (
-        <div className="absolute top-20 left-0 right-0 grid place-items-center pointer-events-none">
-          <div className="bg-black/70 text-white text-sm px-4 py-2 rounded-full">
-            Hold steady · 10-15 cm away · good light
+        <div className="absolute top-20 left-0 right-0 grid place-items-center pointer-events-none px-4">
+          <div className="bg-black/70 text-white text-sm px-4 py-2 rounded-full text-center">
+            Hold steady · 10-15 cm away · try switching camera if blurry
           </div>
         </div>
       )}
