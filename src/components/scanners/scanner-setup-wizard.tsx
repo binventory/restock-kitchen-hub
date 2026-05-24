@@ -1,182 +1,387 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Eye, EyeOff, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthProvider";
 import { useHousehold } from "@/contexts/HouseholdProvider";
-import QRCode from "qrcode";
 import { toast } from "sonner";
 
 interface Props {
   onClose: () => void;
 }
 
-interface Step {
-  id: string;
-  step_number: number;
-  step_name: string;
-  description: string | null;
-  qr_payload: string;
+type Step = "name" | "reset" | "mode" | "ttl" | "config" | "test";
+
+const SSID_HISTORY_KEY = "restock_scanner_ssid_history";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? "";
+const DEFAULT_SCAN_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/scan` : "";
+
+function getSsidHistory(): string[] {
+  try {
+    const raw = localStorage.getItem(SSID_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.slice(0, 10) : [];
+  } catch {
+    return [];
+  }
 }
 
-// Builds the firmware config payload from user-supplied WiFi credentials.
-// All values are passed through JSON.stringify, which escapes every
-// special character (commas, quotes, newlines, backslashes), so a
-// malicious SSID like  evil,evilpass,https://attacker/scan,realtoken
-// cannot shift the endpoint / token fields. Firmware must JSON.parse()
-// the body that follows the "CONFIG:" prefix.
-function buildConfigPayload(input: { ssid: string; pwd: string; endpoint: string; token: string }): string {
-  const safeBody = JSON.stringify({
-    ssid: input.ssid,
-    pwd: input.pwd,
-    endpoint: input.endpoint,
-    token: input.token,
-  });
-  return "CONFIG:" + safeBody;
+function saveSsidToHistory(ssid: string) {
+  if (!ssid.trim()) return;
+  const existing = getSsidHistory();
+  const next = [ssid, ...existing.filter((s) => s !== ssid)].slice(0, 10);
+  try {
+    localStorage.setItem(SSID_HISTORY_KEY, JSON.stringify(next));
+  } catch {
+    // ignore
+  }
 }
 
 export function ScannerSetupWizard({ onClose }: Props) {
+  useTranslation();
+  const { user } = useAuth();
   const { current } = useHousehold();
-  const [step, setStep] = useState(1);
+
+  const [step, setStep] = useState<Step>("name");
+  const [, setScannerId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
-  const [token, setToken] = useState<string | null>(null);
-  const [configSteps, setConfigSteps] = useState<Step[]>([]);
-  const [configIdx, setConfigIdx] = useState(0);
-  const [ssid, setSsid] = useState("");
-  const [pwd, setPwd] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
-  const [qrUrl, setQrUrl] = useState<string | null>(null);
-  const [finalQr, setFinalQr] = useState<string | null>(null);
 
-  useEffect(() => {
-    void supabase
-      .from("scanner_config_steps")
-      .select("*")
-      .eq("is_active", true)
-      .order("sort_order")
-      .then(({ data }) => setConfigSteps(data ?? []));
-  }, []);
+  const [mode, setMode] = useState<"sense" | "manual">("sense");
 
-  useEffect(() => {
-    const s = configSteps[configIdx];
-    if (step === 2 && s) void QRCode.toDataURL(s.qr_payload).then(setQrUrl);
-  }, [step, configIdx, configSteps]);
+  const [ssidHistory] = useState(getSsidHistory());
+  const [ssidSelect, setSsidSelect] = useState(
+    ssidHistory.length > 0 ? ssidHistory[0] : "__custom__",
+  );
+  const [ssidCustom, setSsidCustom] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [serverUrl, setServerUrl] = useState(DEFAULT_SCAN_URL);
+
+  const ssid = ssidSelect === "__custom__" ? ssidCustom.trim() : ssidSelect;
 
   const createScanner = async () => {
-    if (!current) return;
-    const { data, error } = await supabase
-      .from("scanners")
-      .insert({ household_id: current.id, name, location })
-      .select("id")
-      .single();
-    if (error || !data) {
-      console.error("[scanner create]", error);
-      return toast.error("Could not create scanner. Please try again.");
-    }
-    const { data: tok, error: tErr } = await supabase.rpc("get_scanner_token", {
-      _scanner_id: data.id as string,
-    });
-    if (tErr || !tok) {
-      console.error("[scanner token]", tErr);
-      return toast.error("Could not generate scanner token. Please try again.");
-    }
-    setToken(tok as string);
-    setStep(2);
-  };
-
-  const buildFinal = async () => {
-    if (!token) {
-      toast.error("Scanner token missing. Restart the wizard.");
+    if (!name.trim() || !user || !current) {
+      toast.error("Name your scanner first");
       return;
     }
-    const { data } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "scanner_endpoint_url")
-      .maybeSingle();
-    const endpoint = data?.value ?? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scan`;
-    const payload = buildConfigPayload({ ssid, pwd, endpoint, token });
+    const { data, error } = await supabase
+      .from("scanners")
+      .insert({
+        household_id: current.id,
+        name: name.trim(),
+        location: location.trim() || null,
+      })
+      .select("id, token")
+      .single();
+    if (error || !data) {
+      toast.error("Could not create scanner");
+      return;
+    }
+    setScannerId(data.id);
+    setToken(data.token as string);
+    setStep("reset");
+  };
+
+  const finishConfig = () => {
+    if (!ssid || !password || !serverUrl || !token) {
+      toast.error("Fill in all fields");
+      return;
+    }
+    saveSsidToHistory(ssid);
+    setStep("test");
+  };
+
+  const testScanner = async () => {
+    if (!token) return;
     try {
-      const qr = await QRCode.toDataURL(payload, { width: 320 });
-      setFinalQr(qr);
-      setStep(4);
-    } catch (e) {
-      console.error("[scanner qr]", e);
-      toast.error("Could not generate QR code. Please try again.");
+      const res = await fetch(serverUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanner_token: token, barcode: "TEST-PING" }),
+      });
+      if (res.ok || res.status === 404) {
+        toast.success("✅ Scanner endpoint reachable");
+      } else {
+        toast.error(`Endpoint returned ${res.status}`);
+      }
+    } catch {
+      toast.error("Could not reach the server URL");
     }
   };
+
+  const configPayload =
+    ssid && password && serverUrl && token
+      ? `CONFIG:${ssid},${password},${serverUrl},${token}`
+      : "";
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
-        <h2 className="text-lg font-bold">Set up scanner — Step {step}/5</h2>
-        {step === 1 && (
-          <div className="space-y-2">
-            <Input
-              placeholder="Scanner name (e.g. Kitchen bin)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-            <Input placeholder="Location" value={location} onChange={(e) => setLocation(e.target.value)} />
-            <Button onClick={() => void createScanner()} disabled={!name}>
-              Next
-            </Button>
-          </div>
-        )}
-        {step === 2 &&
-          (configSteps.length === 0 ? (
-            <div className="space-y-2 text-sm">
-              <p>No configuration steps set up yet. Ask your administrator to configure scanner steps.</p>
-              <Button onClick={() => setStep(3)}>Skip</Button>
-            </div>
-          ) : (
-            <div className="space-y-2 text-center">
-              <p className="text-sm font-semibold">{configSteps[configIdx]?.step_name}</p>
-              <p className="text-xs text-muted-foreground">{configSteps[configIdx]?.description}</p>
-              {qrUrl && <img src={qrUrl} alt="QR" className="mx-auto" />}
-              <Button
-                onClick={() => {
-                  if (configIdx < configSteps.length - 1) setConfigIdx(configIdx + 1);
-                  else setStep(3);
-                }}
-              >
-                Next step →
-              </Button>
-            </div>
-          ))}
-        {step === 3 && (
-          <div className="space-y-2">
-            <Input placeholder="WiFi SSID" value={ssid} onChange={(e) => setSsid(e.target.value)} />
-            <div className="flex gap-2">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+        <h2 className="text-lg font-bold">Set up scanner</h2>
+
+        {step === "name" && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Step 1 of 5 — Name your scanner.
+            </p>
+            <div className="space-y-1">
+              <Label>Name *</Label>
               <Input
-                type={showPwd ? "text" : "password"}
-                placeholder="WiFi password"
-                value={pwd}
-                onChange={(e) => setPwd(e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Kitchen bin"
               />
-              <Button variant="outline" onClick={() => setShowPwd(!showPwd)}>
-                {showPwd ? "Hide" : "Show"}
-              </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Stored only in the QR code, not on our servers.</p>
-            <Button onClick={() => void buildFinal()} disabled={!ssid}>
-              Next
+            <div className="space-y-1">
+              <Label>Location (optional)</Label>
+              <Input
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="Under the sink"
+              />
+            </div>
+            <Button className="w-full" onClick={() => void createScanner()}>
+              Continue
             </Button>
           </div>
         )}
-        {step === 4 && finalQr && (
-          <div className="space-y-2 text-center">
-            <p className="text-sm">Scan this with your Restock scanner hardware</p>
-            <img src={finalQr} alt="Config QR" className="mx-auto" />
-            <p className="text-xs text-orange-600">Keep this QR code private 🔒</p>
-            <Button onClick={() => setStep(5)}>Next</Button>
+
+        {step === "reset" && (
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-muted-foreground">
+              Step 2 of 5 — Reset the scanner.
+            </p>
+            <p className="text-sm">
+              Hold the scanner camera up to this QR code. The scanner will beep
+              when it resets.
+            </p>
+            <div className="bg-white p-4 rounded-lg inline-block mx-auto">
+              <QRCodeSVG value="S_CMD_FFFF" size={200} />
+            </div>
+            <p className="font-mono text-xs text-muted-foreground">S_CMD_FFFF</p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setStep("name")}>
+                Back
+              </Button>
+              <Button className="flex-1" onClick={() => setStep("mode")}>
+                <Check className="h-4 w-4 mr-1" /> Done — next
+              </Button>
+            </div>
           </div>
         )}
-        {step === 5 && (
-          <div className="space-y-2 text-center">
-            <p className="text-sm">Setup complete!</p>
-            <Button onClick={onClose} className="w-full">
+
+        {step === "mode" && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Step 3 of 5 — Pick scan mode.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setMode("sense")}
+                className={`p-3 rounded-lg border text-sm text-left ${
+                  mode === "sense" ? "border-primary bg-primary/10" : "border-border"
+                }`}
+              >
+                <p className="font-semibold">Sense Mode</p>
+                <p className="text-xs text-muted-foreground">
+                  Auto-scans when something is in front of it
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("manual")}
+                className={`p-3 rounded-lg border text-sm text-left ${
+                  mode === "manual" ? "border-primary bg-primary/10" : "border-border"
+                }`}
+              >
+                <p className="font-semibold">Manual Mode</p>
+                <p className="text-xs text-muted-foreground">
+                  Scans only when button is pressed
+                </p>
+              </button>
+            </div>
+
+            {mode === "sense" && (
+              <div className="text-center space-y-2">
+                <p className="text-sm">Show this QR code to enable Sense Mode.</p>
+                <div className="bg-white p-4 rounded-lg inline-block mx-auto">
+                  <QRCodeSVG value="S_CMD_020F" size={180} />
+                </div>
+                <p className="font-mono text-xs text-muted-foreground">S_CMD_020F</p>
+              </div>
+            )}
+            {mode === "manual" && (
+              <p className="text-sm text-muted-foreground text-center">
+                Manual mode is the default — no QR needed. Skip to the next step.
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setStep("reset")}>
+                Back
+              </Button>
+              <Button className="flex-1" onClick={() => setStep("ttl")}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "ttl" && (
+          <div className="space-y-3 text-center">
+            <p className="text-sm text-muted-foreground">
+              Step 4 of 5 — Set communication timing (TTL).
+            </p>
+            <p className="text-sm">Show this QR code to the scanner.</p>
+            <div className="bg-white p-4 rounded-lg inline-block mx-auto">
+              <QRCodeSVG value="S_CMD_01H3" size={200} />
+            </div>
+            <p className="font-mono text-xs text-muted-foreground">S_CMD_01H3</p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setStep("mode")}>
+                Back
+              </Button>
+              <Button className="flex-1" onClick={() => setStep("config")}>
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "config" && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Step 5 of 5 — WiFi & server config.
+            </p>
+
+            <div className="space-y-1">
+              <Label>WiFi network</Label>
+              {ssidHistory.length > 0 && (
+                <Select value={ssidSelect} onValueChange={setSsidSelect}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ssidHistory.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__custom__">➕ Enter new network</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {(ssidSelect === "__custom__" || ssidHistory.length === 0) && (
+                <Input
+                  value={ssidCustom}
+                  onChange={(e) => setSsidCustom(e.target.value)}
+                  placeholder="WiFi network name (SSID)"
+                  className="mt-2"
+                />
+              )}
+              <p className="text-xs text-muted-foreground">
+                Browsers can't list nearby networks. Type the name you see on
+                your phone's WiFi settings.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label>WiFi password</Label>
+              <div className="flex gap-2">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Server URL</Label>
+              <Input
+                value={serverUrl}
+                onChange={(e) => setServerUrl(e.target.value)}
+                placeholder="https://.../functions/v1/scan"
+              />
+              <p className="text-xs text-muted-foreground">
+                Endpoint the scanner will POST barcodes to.
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Scanner ID</Label>
+              <Input value={token ?? ""} readOnly className="font-mono text-xs" />
+              <p className="text-xs text-muted-foreground">
+                Auto-generated. Keep this secret — it authenticates this device.
+              </p>
+            </div>
+
+            {configPayload && (
+              <div className="text-center space-y-2">
+                <div className="bg-white p-4 rounded-lg inline-block mx-auto">
+                  <QRCodeSVG value={configPayload} size={220} />
+                </div>
+                <p className="font-mono text-[10px] text-muted-foreground break-all">
+                  {configPayload.length > 60
+                    ? configPayload.slice(0, 60) + "..."
+                    : configPayload}
+                </p>
+                <p className="text-xs text-orange-600">
+                  🔒 This QR contains your WiFi password and scanner credentials.
+                  Don't share it.
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => setStep("ttl")}>
+                Back
+              </Button>
+              <Button className="flex-1" onClick={finishConfig}>
+                Show QR — next
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "test" && (
+          <div className="space-y-3 text-center">
+            <p className="text-sm font-semibold">All steps done.</p>
+            <p className="text-sm text-muted-foreground">
+              Your scanner should now reboot and connect to WiFi. Test the
+              connection below.
+            </p>
+            <Button className="w-full" onClick={() => void testScanner()}>
+              <Check className="h-4 w-4 mr-1" />
+              Test Scanner
+            </Button>
+            <Button variant="outline" className="w-full" onClick={onClose}>
               Done
             </Button>
           </div>
