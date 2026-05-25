@@ -119,40 +119,11 @@ export async function lookupBarcode(
     // Server function unavailable — fall through.
   }
 
-  // 4b. Client-side fallback using the "openfoodfacts insert"
-  //     RLS policy on products.
-  const off = await fetchFromOpenFoodFacts(barcode);
-  if (off) {
-    const insertRow = {
-      ...off,
-      source: "openfoodfacts" as const,
-      is_approved: true,
-      submitted_by_user_id: null,
-    };
-
-    const { data: inserted } = await supabase
-      .from("products")
-      .insert(insertRow)
-      .select("*")
-      .single();
-    if (inserted) return rowToResolved(inserted, "global", "products");
-
-    const { data: existing } = await supabase
-      .from("products")
-      .select("*")
-      .eq("barcode", barcode)
-      .eq("is_approved", true)
-      .maybeSingle();
-    if (existing) return rowToResolved(existing, "global", "products");
-
-    return {
-      id: `off_${barcode}`,
-      type: "global" as const,
-      tableSource: "products" as const,
-      isRejected: false,
-      ...off,
-    };
-  }
+  // Step 4b removed: client-side inserts into `products` are not permitted.
+  // All OpenFoodFacts ingestion must go through the server function above,
+  // which validates the barcode and uses the admin client.
+  return null;
+}
 
   return null;
 }
