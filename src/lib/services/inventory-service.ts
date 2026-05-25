@@ -250,7 +250,7 @@ export async function addToInventory(
   let section_id: string | null = null;
   let product_group_id: string | null = null;
   if (productName) {
-    const detected = await autoDetectGroup(productName);
+    const detected = await autoDetectGroup(productName, foodGroup ?? null);
     section_id = detected.section_id;
     product_group_id = detected.product_group_id;
   }
