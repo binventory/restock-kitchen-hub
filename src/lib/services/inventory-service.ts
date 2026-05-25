@@ -223,6 +223,7 @@ export async function addToInventory(
   limit: number,
   unit: string,
   productName?: string,
+  foodGroup?: string | null,
 ): Promise<string | null> {
   if (ref.product_id && ref.product_id.startsWith("off_")) return null;
   if (ref.user_product_id && ref.user_product_id.startsWith("off_")) return null;
