@@ -150,18 +150,28 @@ export async function fetchFullProduct(
 
 async function autoDetectGroup(
   productName: string,
+  foodGroup: string | null,
 ): Promise<{ section_id: string | null; product_group_id: string | null }> {
-  const lower = productName.toLowerCase();
   const { data: groups } = await supabase.from("product_groups").select("id, section_id, keywords");
   if (!groups) return { section_id: null, product_group_id: null };
-  for (const g of groups) {
-    const kw = (g.keywords as string[] | null) ?? [];
-    if (kw.some((k) => lower.includes(k.toLowerCase()))) {
-      return {
-        section_id: (g.section_id as string | null) ?? null,
-        product_group_id: (g.id as string) ?? null,
-      };
+  const tryMatch = (haystack: string) => {
+    const lower = haystack.toLowerCase();
+    for (const g of groups) {
+      const kw = (g.keywords as string[] | null) ?? [];
+      if (kw.some((k) => lower.includes(k.toLowerCase()))) {
+        return {
+          section_id: (g.section_id as string | null) ?? null,
+          product_group_id: (g.id as string) ?? null,
+        };
+      }
     }
+    return null;
+  };
+  const byName = tryMatch(productName);
+  if (byName) return byName;
+  if (foodGroup) {
+    const byFoodGroup = tryMatch(foodGroup);
+    if (byFoodGroup) return byFoodGroup;
   }
   return { section_id: null, product_group_id: null };
 }
