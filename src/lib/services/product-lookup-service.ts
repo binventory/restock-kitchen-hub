@@ -16,6 +16,7 @@ function rowToResolved(
     brand: (row.brand as string | null) ?? null,
     generic_name: (row.generic_name as string | null) ?? null,
     category: (row.category as string | null) ?? null,
+    food_group: (row.food_group as string | null) ?? null,
     image_url: (row.image_url as string | null) ?? null,
     quantity_value: (row.quantity_value as number | null) ?? null,
     quantity_unit: (row.quantity_unit as string | null) ?? null,
