@@ -74,7 +74,7 @@ export function AddProductForm({ barcode, onClose, onSaved }: Props) {
     toast.success("Product saved! 🎉 Our team will review it.");
     onSaved({
       id: up.id, type: "user", tableSource: "user_products", barcode, name: name.trim(),
-      brand: brand.trim() || null, generic_name: null, category: null, image_url: null,
+      brand: brand.trim() || null, generic_name: null, category: null, food_group: null, image_url: null,
       quantity_value: null, quantity_unit: null, calories_100g: null, fat_100g: null,
       saturated_fat_100g: null, carbohydrates_100g: null, sugars_100g: null, proteins_100g: null,
       salt_100g: null, fiber_100g: null, serving_size_g: null, calories_serving: null,

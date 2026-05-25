@@ -116,6 +116,7 @@ export async function fetchFullProduct(
     brand: (data.brand as string | null) ?? null,
     generic_name: (data.generic_name as string | null) ?? null,
     category: (data.category as string | null) ?? null,
+    food_group: (data.food_group as string | null) ?? null,
     image_url: (data.image_url as string | null) ?? null,
     quantity_value: (data.quantity_value as number | null) ?? null,
     quantity_unit: (data.quantity_unit as string | null) ?? null,
@@ -149,18 +150,28 @@ export async function fetchFullProduct(
 
 async function autoDetectGroup(
   productName: string,
+  foodGroup: string | null,
 ): Promise<{ section_id: string | null; product_group_id: string | null }> {
-  const lower = productName.toLowerCase();
   const { data: groups } = await supabase.from("product_groups").select("id, section_id, keywords");
   if (!groups) return { section_id: null, product_group_id: null };
-  for (const g of groups) {
-    const kw = (g.keywords as string[] | null) ?? [];
-    if (kw.some((k) => lower.includes(k.toLowerCase()))) {
-      return {
-        section_id: (g.section_id as string | null) ?? null,
-        product_group_id: (g.id as string) ?? null,
-      };
+  const tryMatch = (haystack: string) => {
+    const lower = haystack.toLowerCase();
+    for (const g of groups) {
+      const kw = (g.keywords as string[] | null) ?? [];
+      if (kw.some((k) => lower.includes(k.toLowerCase()))) {
+        return {
+          section_id: (g.section_id as string | null) ?? null,
+          product_group_id: (g.id as string) ?? null,
+        };
+      }
     }
+    return null;
+  };
+  const byName = tryMatch(productName);
+  if (byName) return byName;
+  if (foodGroup) {
+    const byFoodGroup = tryMatch(foodGroup);
+    if (byFoodGroup) return byFoodGroup;
   }
   return { section_id: null, product_group_id: null };
 }
@@ -212,6 +223,7 @@ export async function addToInventory(
   limit: number,
   unit: string,
   productName?: string,
+  foodGroup?: string | null,
 ): Promise<string | null> {
   if (ref.product_id && ref.product_id.startsWith("off_")) return null;
   if (ref.user_product_id && ref.user_product_id.startsWith("off_")) return null;
@@ -238,7 +250,7 @@ export async function addToInventory(
   let section_id: string | null = null;
   let product_group_id: string | null = null;
   if (productName) {
-    const detected = await autoDetectGroup(productName);
+    const detected = await autoDetectGroup(productName, foodGroup ?? null);
     section_id = detected.section_id;
     product_group_id = detected.product_group_id;
   }

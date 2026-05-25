@@ -1765,6 +1765,7 @@ export type Database = {
           ecoscore: Database["public"]["Enums"]["ecoscore_grade"] | null
           expiry_date: string | null
           fat_100g: number | null
+          food_group: string | null
           generic_name: string | null
           halal_certified: boolean | null
           id: string
@@ -1801,6 +1802,7 @@ export type Database = {
           ecoscore?: Database["public"]["Enums"]["ecoscore_grade"] | null
           expiry_date?: string | null
           fat_100g?: number | null
+          food_group?: string | null
           generic_name?: string | null
           halal_certified?: boolean | null
           id?: string
@@ -1837,6 +1839,7 @@ export type Database = {
           ecoscore?: Database["public"]["Enums"]["ecoscore_grade"] | null
           expiry_date?: string | null
           fat_100g?: number | null
+          food_group?: string | null
           generic_name?: string | null
           halal_certified?: boolean | null
           id?: string

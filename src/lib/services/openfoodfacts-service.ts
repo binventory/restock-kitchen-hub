@@ -71,12 +71,18 @@ function parseOff(barcode: string, p: Record<string, unknown>): OffProduct {
   const brand = (str("brands") ?? "").split(",")[0]?.trim() || null;
   const novaRaw = num("nova_group");
   const nova = novaRaw && [1, 2, 3, 4].includes(novaRaw) ? (novaRaw as 1 | 2 | 3 | 4) : null;
+  const foodGroupsTags = rawTags("food_groups_tags");
+  const rawFoodGroup = foodGroupsTags[0] ?? null;
+  const food_group = rawFoodGroup
+    ? rawFoodGroup.replace(/^en:/, "").replace(/-/g, " ").trim().toLowerCase()
+    : null;
   return {
     barcode,
     name,
     brand,
     generic_name: str("generic_name_en") ?? str("generic_name"),
     category: (str("categories") ?? "").split(",")[0]?.trim() || null,
+    food_group,
     image_url: str("image_front_url") ?? str("image_url"),
     quantity_value: num("product_quantity"),
     quantity_unit: str("product_quantity_unit"),

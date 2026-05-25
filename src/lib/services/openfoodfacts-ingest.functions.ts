@@ -66,6 +66,10 @@ export const ingestOpenFoodFactsProduct = createServerFn({ method: "POST" })
       brand: (str("brands") ?? "").split(",")[0]?.trim() || null,
       generic_name: str("generic_name_en") ?? str("generic_name"),
       category: (str("categories") ?? "").split(",")[0]?.trim() || null,
+      food_group: (() => {
+        const t = rawTags("food_groups_tags")[0];
+        return t ? t.replace(/^en:/, "").replace(/-/g, " ").trim().toLowerCase() : null;
+      })(),
       image_url: str("image_front_url") ?? str("image_url"),
       quantity_value: num("product_quantity"),
       quantity_unit: str("product_quantity_unit"),
