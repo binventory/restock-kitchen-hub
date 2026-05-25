@@ -169,7 +169,7 @@ export function ProductInventoryControls({ product, householdId }: Props) {
         ref = product.tableSource === "products" ? { product_id: product.id } : { user_product_id: product.id };
       }
 
-      const id = await addToInventory(householdId, ref, addQty, addLimit, "pieces");
+      const id = await addToInventory(householdId, ref, addQty, addLimit, "pieces", product.name, product.food_group ?? null);
       if (id) {
         setRow({
           id,
