@@ -124,6 +124,3 @@ export async function lookupBarcode(
   // which validates the barcode and uses the admin client.
   return null;
 }
-
-  return null;
-}
