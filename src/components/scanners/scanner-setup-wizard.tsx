@@ -26,9 +26,7 @@ type Step = "name" | "reset" | "mode" | "ttl" | "config" | "test";
 
 const SSID_HISTORY_KEY = "restock_scanner_ssid_history";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL ?? "";
-const DEFAULT_SCAN_URL = SUPABASE_URL
-  ? `${SUPABASE_URL}/functions/v1/scan`
-  : "";
+const SERVER_URL = SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/scan` : "";
 
 function getSsidHistory(): string[] {
   try {
@@ -59,14 +57,11 @@ export function ScannerSetupWizard({ onClose }: Props) {
 
   const [step, setStep] = useState<Step>("name");
 
-  // Step 1
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
 
-  // Step 3
   const [mode, setMode] = useState<"sense" | "manual">("sense");
 
-  // Step 5
   const [ssidHistory] = useState(getSsidHistory());
   const [ssidSelect, setSsidSelect] = useState(
     ssidHistory.length > 0 ? ssidHistory[0] : "__custom__",
@@ -74,9 +69,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
   const [ssidCustom, setSsidCustom] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [serverUrl, setServerUrl] = useState(DEFAULT_SCAN_URL);
 
-  // Created scanner state (only populated when we reach step 5)
   const [, setScannerId] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [credentialsBusy, setCredentialsBusy] = useState(false);
@@ -92,7 +85,6 @@ export function ScannerSetupWizard({ onClose }: Props) {
     setStep("reset");
   };
 
-  // Lazy create + fetch token. Runs once when we hit the config step.
   const generateCredentials = async () => {
     if (token || credentialsBusy) return;
     if (!user || !current) {
@@ -127,11 +119,9 @@ export function ScannerSetupWizard({ onClose }: Props) {
       await supabase.from("scanners").delete().eq("id", inserted.id);
       const raw = tokenErr?.message ?? "Could not retrieve scanner token";
       setCredentialsError(
-        raw.includes("Only household owners")
+        raw.includes("Only the household owner")
           ? "Only the household owner can set up a scanner."
-          : raw.includes("function") && raw.includes("does not exist")
-            ? "Database not ready yet. Please run the latest migration in Supabase."
-            : raw,
+          : raw,
       );
       setCredentialsBusy(false);
       return;
@@ -150,8 +140,8 @@ export function ScannerSetupWizard({ onClose }: Props) {
   }, [step]);
 
   const finishConfig = () => {
-    if (!ssid || !password || !serverUrl || !token) {
-      toast.error("Please fill in all fields");
+    if (!ssid || !password || !token) {
+      toast.error("Please fill in WiFi name and password");
       return;
     }
     saveSsidToHistory(ssid);
@@ -161,7 +151,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
   const testScanner = async () => {
     if (!token) return;
     try {
-      const res = await fetch(serverUrl, {
+      const res = await fetch(SERVER_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scanner_token: token, barcode: "TEST-PING" }),
@@ -176,10 +166,10 @@ export function ScannerSetupWizard({ onClose }: Props) {
     }
   };
 
-  const configPayload =
-    ssid && password && serverUrl && token
-      ? `CONFIG:${ssid},${password},${serverUrl},${token}`
-      : "";
+  const hasCredsAndWifi = !!ssid && !!password && !!token && !!SERVER_URL;
+  const configPayload = hasCredsAndWifi
+    ? `CONFIG:${ssid},${password},${SERVER_URL},${token}`
+    : "";
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -220,19 +210,14 @@ export function ScannerSetupWizard({ onClose }: Props) {
               Step 2 of 5 — Reset the scanner.
             </p>
             <p className="text-sm">
-              Hold the scanner camera up to this QR code. The scanner will beep
-              when it resets.
+              Hold the scanner camera up to this QR code.
             </p>
             <div className="bg-white p-4 rounded-lg inline-block mx-auto">
               <QRCodeSVG value="S_CMD_FFFF" size={200} />
             </div>
             <p className="font-mono text-xs text-muted-foreground">S_CMD_FFFF</p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setStep("name")}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setStep("name")}>
                 Back
               </Button>
               <Button className="flex-1" onClick={() => setStep("mode")}>
@@ -252,9 +237,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
                 type="button"
                 onClick={() => setMode("sense")}
                 className={`p-3 rounded-lg border text-sm text-left ${
-                  mode === "sense"
-                    ? "border-primary bg-primary/10"
-                    : "border-border"
+                  mode === "sense" ? "border-primary bg-primary/10" : "border-border"
                 }`}
               >
                 <p className="font-semibold">Sense Mode</p>
@@ -266,9 +249,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
                 type="button"
                 onClick={() => setMode("manual")}
                 className={`p-3 rounded-lg border text-sm text-left ${
-                  mode === "manual"
-                    ? "border-primary bg-primary/10"
-                    : "border-border"
+                  mode === "manual" ? "border-primary bg-primary/10" : "border-border"
                 }`}
               >
                 <p className="font-semibold">Manual Mode</p>
@@ -277,30 +258,22 @@ export function ScannerSetupWizard({ onClose }: Props) {
                 </p>
               </button>
             </div>
-
             {mode === "sense" && (
               <div className="text-center space-y-2">
                 <p className="text-sm">Show this QR code to enable Sense Mode.</p>
                 <div className="bg-white p-4 rounded-lg inline-block mx-auto">
                   <QRCodeSVG value="S_CMD_020F" size={180} />
                 </div>
-                <p className="font-mono text-xs text-muted-foreground">
-                  S_CMD_020F
-                </p>
+                <p className="font-mono text-xs text-muted-foreground">S_CMD_020F</p>
               </div>
             )}
             {mode === "manual" && (
               <p className="text-sm text-muted-foreground text-center">
-                Manual mode is the default — no QR needed. Skip to the next step.
+                Manual mode is the default — no QR needed.
               </p>
             )}
-
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setStep("reset")}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setStep("reset")}>
                 Back
               </Button>
               <Button className="flex-1" onClick={() => setStep("ttl")}>
@@ -321,11 +294,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
             </div>
             <p className="font-mono text-xs text-muted-foreground">S_CMD_01H3</p>
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setStep("mode")}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setStep("mode")}>
                 Back
               </Button>
               <Button className="flex-1" onClick={() => setStep("config")}>
@@ -338,7 +307,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
         {step === "config" && (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Step 5 of 5 — WiFi & server config.
+              Step 5 of 5 — WiFi network for your scanner.
             </p>
 
             {credentialsBusy && (
@@ -354,11 +323,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
                   <AlertCircle className="h-4 w-4 text-destructive mt-0.5" />
                   <p className="text-sm text-destructive">{credentialsError}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void generateCredentials()}
-                >
+                <Button variant="outline" size="sm" onClick={() => void generateCredentials()}>
                   Retry
                 </Button>
               </div>
@@ -379,9 +344,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
                             {s}
                           </SelectItem>
                         ))}
-                        <SelectItem value="__custom__">
-                          ➕ Enter new network
-                        </SelectItem>
+                        <SelectItem value="__custom__">➕ Enter new network</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
@@ -394,8 +357,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
                     />
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Browsers can't list nearby networks. Type the name you see
-                    on your phone's WiFi settings.
+                    Type the name you see on your phone's WiFi settings.
                   </p>
                 </div>
 
@@ -414,73 +376,40 @@ export function ScannerSetupWizard({ onClose }: Props) {
                       size="icon"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label>Server URL</Label>
-                  <Input
-                    value={serverUrl}
-                    onChange={(e) => setServerUrl(e.target.value)}
-                    placeholder="https://.../functions/v1/scan"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Endpoint the scanner will POST barcodes to.
-                  </p>
-                </div>
-
-                <div className="space-y-1">
-                  <Label>Scanner ID</Label>
-                  <Input
-                    value={token ?? ""}
-                    readOnly
-                    className="font-mono text-xs"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Auto-generated. Keep this secret — it authenticates this
-                    device.
-                  </p>
-                </div>
-
-                {configPayload && (
+                {hasCredsAndWifi && (
                   <div className="text-center space-y-2">
+                    <p className="text-sm font-medium">
+                      Show this QR code to the scanner
+                    </p>
                     <div className="bg-white p-4 rounded-lg inline-block mx-auto">
                       <QRCodeSVG value={configPayload} size={220} />
                     </div>
-                    <p className="font-mono text-[10px] text-muted-foreground break-all">
-                      {configPayload.length > 60
-                        ? configPayload.slice(0, 60) + "..."
-                        : configPayload}
-                    </p>
                     <p className="text-xs text-orange-600">
-                      🔒 This QR contains your WiFi password and scanner
-                      credentials. Don't share it.
+                      🔒 Contains your WiFi password and scanner credentials.
+                      Don't share this screen.
                     </p>
                   </div>
+                )}
+
+                {!hasCredsAndWifi && (
+                  <p className="text-xs text-muted-foreground text-center py-2">
+                    Enter WiFi name and password — the QR will appear.
+                  </p>
                 )}
               </>
             )}
 
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setStep("ttl")}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setStep("ttl")}>
                 Back
               </Button>
-              <Button
-                className="flex-1"
-                onClick={finishConfig}
-                disabled={!token}
-              >
-                Show QR — next
+              <Button className="flex-1" onClick={finishConfig} disabled={!hasCredsAndWifi}>
+                Done — test
               </Button>
             </div>
           </div>
@@ -490,8 +419,7 @@ export function ScannerSetupWizard({ onClose }: Props) {
           <div className="space-y-3 text-center">
             <p className="text-sm font-semibold">All steps done.</p>
             <p className="text-sm text-muted-foreground">
-              Your scanner should now reboot and connect to WiFi. Test the
-              connection below.
+              Your scanner should now reboot and connect to WiFi.
             </p>
             <Button className="w-full" onClick={() => void testScanner()}>
               <Check className="h-4 w-4 mr-1" />
