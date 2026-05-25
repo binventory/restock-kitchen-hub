@@ -6,6 +6,7 @@ export interface OffProduct {
   brand: string | null;
   generic_name: string | null;
   category: string | null;
+  food_group: string | null;
   image_url: string | null;
   quantity_value: number | null;
   quantity_unit: string | null;
