@@ -1,7 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
-import { fetchFromOpenFoodFacts } from "./openfoodfacts-service";
 import { ingestOpenFoodFactsProduct } from "./openfoodfacts-ingest.functions";
-import type { OffProduct, ResolvedProduct } from "@/lib/types/product";
+import type { ResolvedProduct } from "@/lib/types/product";
 
 function rowToResolved(
   row: Record<string, unknown>,
