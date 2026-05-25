@@ -116,6 +116,7 @@ export async function fetchFullProduct(
     brand: (data.brand as string | null) ?? null,
     generic_name: (data.generic_name as string | null) ?? null,
     category: (data.category as string | null) ?? null,
+    food_group: (data.food_group as string | null) ?? null,
     image_url: (data.image_url as string | null) ?? null,
     quantity_value: (data.quantity_value as number | null) ?? null,
     quantity_unit: (data.quantity_unit as string | null) ?? null,
