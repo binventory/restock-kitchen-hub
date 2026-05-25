@@ -153,6 +153,7 @@ export function ProductInventoryControls({ product, householdId }: Props) {
                 image_url: product.image_url,
                 user_id: user.id,
                 submission_status: "pending_approval",
+                food_group: product.food_group ?? null,
               })
               .select("id")
               .single();
