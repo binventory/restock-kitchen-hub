@@ -92,6 +92,7 @@ export function ProductInventoryControls({ product, householdId }: Props) {
           brand: product.brand,
           generic_name: product.generic_name,
           category: product.category,
+          food_group: product.food_group ?? null,
           image_url: product.image_url,
           quantity_value: product.quantity_value,
           quantity_unit: product.quantity_unit,
