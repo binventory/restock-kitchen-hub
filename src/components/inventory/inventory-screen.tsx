@@ -10,6 +10,7 @@ import { InventoryControls } from "./inventory-controls";
 import { InventoryListView } from "./inventory-list-view";
 import { InventoryGroupedView } from "./inventory-grouped-view";
 import { ProductPage } from "@/components/product/product-page";
+import { LivePill } from "@/components/ui/live-pill";
 import type { ResolvedProduct } from "@/lib/types/product";
 
 const PAGE_SIZE = 20;
