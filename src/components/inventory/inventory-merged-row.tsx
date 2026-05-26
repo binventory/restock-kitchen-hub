@@ -47,11 +47,20 @@ export function InventoryMergedRow({ items, onSelect, onDeleted }: Props) {
             {items.length} brands · total {totalQty}
           </p>
         </div>
-        {isLow && (
-          <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-xs font-medium text-orange-600">
-            Low
-          </span>
-        )}
+        {(() => {
+          const isOut = totalQty === 0;
+          const isLowMerged = !isOut && totalQty <= lowestLimit;
+          const cls = isOut
+            ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+            : isLowMerged
+              ? "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300"
+              : "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300";
+          return (
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+              {isOut ? "RESTOCK" : `Qty: ${totalQty}`}
+            </span>
+          );
+        })()}
         {open ? (
           <ChevronDown className="h-4 w-4 text-muted-foreground" />
         ) : (
