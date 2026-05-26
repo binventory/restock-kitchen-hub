@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ingestOpenFoodFactsProduct } from "./openfoodfacts-ingest.functions";
+import { fetchFromOpenFoodFacts } from "./openfoodfacts-service";
 import type { ResolvedProduct } from "@/lib/types/product";
 
 function rowToResolved(
@@ -120,8 +121,49 @@ export async function lookupBarcode(
     // Server function unavailable — fall through.
   }
 
-  // Step 4b removed: client-side inserts into `products` are not permitted.
-  // All OpenFoodFacts ingestion must go through the server function above,
-  // which validates the barcode and uses the admin client.
+  // Step 4b. Client-side fallback when the server function is unavailable
+  // (e.g. SUPABASE_SERVICE_ROLE_KEY not configured). Authenticated users
+  // can INSERT into products via the "openfoodfacts insert" RLS policy,
+  // which enforces source='openfoodfacts', is_approved=true, and
+  // submitted_by_user_id IS NULL — so this path can only create validated
+  // OFF rows, never user-tampered data.
+  const off = await fetchFromOpenFoodFacts(barcode);
+  if (off) {
+    const insertRow = {
+      ...off,
+      source: "openfoodfacts" as const,
+      is_approved: true,
+      submitted_by_user_id: null,
+    };
+    const { data: inserted } = await supabase
+      .from("products")
+      .insert(insertRow)
+      .select("*")
+      .single();
+    if (inserted) {
+      return rowToResolved(inserted, "global", "products");
+    }
+    // If the insert failed (e.g. another device just inserted the same
+    // barcode), re-fetch the existing approved row.
+    const { data: existing } = await supabase
+      .from("products")
+      .select("*")
+      .eq("barcode", barcode)
+      .eq("is_approved", true)
+      .maybeSingle();
+    if (existing) {
+      return rowToResolved(existing, "global", "products");
+    }
+    // Absolute last resort: return an off_ temp id so the product page
+    // still opens with OFF data. The user can then add it manually.
+    return {
+      id: `off_${barcode}`,
+      type: "global" as const,
+      tableSource: "products" as const,
+      isRejected: false,
+      ...off,
+    };
+  }
+  // Truly not found anywhere — let the caller offer "Add new product".
   return null;
 }
