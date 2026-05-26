@@ -17,7 +17,6 @@ export function InventoryMergedRow({ items, onSelect, onDeleted }: Props) {
   const lowestLimit = Math.min(
     ...items.map((it) => Number(it.limit_threshold)),
   );
-  const isLow = totalQty <= lowestLimit;
   const first = items[0];
   const baseName = first.product?.name ?? "—";
 
