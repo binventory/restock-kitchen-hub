@@ -108,7 +108,7 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
         <div className="flex-1 min-w-0 cursor-pointer" onClick={() => void openProduct()}>
           <p className="font-medium text-sm truncate">{name}</p>
           {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
-          <div className="flex gap-1 mt-0.5">
+          <div className="flex flex-wrap items-center gap-1 mt-0.5">
             {item.product_id ? (
               <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
                 Global Database
@@ -122,6 +122,11 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
                 Custom
               </span>
             ) : null}
+            {item.product?.available_stores?.[0] && (
+              <span className="inline-flex items-center text-[10px] font-medium border border-border bg-card text-muted-foreground px-1.5 py-0.5 rounded">
+                🛒 {item.product.available_stores[0]}
+              </span>
+            )}
           </div>
           {item.item_note && <p className="text-xs text-green-700 dark:text-green-400 truncate">📝 {item.item_note}</p>}
           <div className="flex items-center gap-2 mt-1">
