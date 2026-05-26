@@ -2106,9 +2106,11 @@ export type Database = {
     }
     Functions: {
       accept_invite: { Args: { _token: string }; Returns: string }
+      approve_user_product: { Args: { _id: string }; Returns: string }
       can_see_profile: { Args: { _target: string }; Returns: boolean }
       cancel_own_order: { Args: { _order_id: string }; Returns: undefined }
       create_household: { Args: { _name: string }; Returns: string }
+      decline_user_product: { Args: { _id: string }; Returns: undefined }
       delete_my_account: { Args: never; Returns: undefined }
       get_admin_role: {
         Args: { _user_id: string }
@@ -2132,6 +2134,20 @@ export type Database = {
         Args: { _household_id: string; _user_id: string }
         Returns: boolean
       }
+      log_admin_action: {
+        Args: {
+          _action: string
+          _details?: Json
+          _entity_id: string
+          _entity_type: string
+        }
+        Returns: undefined
+      }
+      override_user_plan: {
+        Args: { _plan_slug: string; _user_id: string }
+        Returns: undefined
+      }
+      reject_forever_product: { Args: { _id: string }; Returns: undefined }
       request_data_export: { Args: { _user_id: string }; Returns: string }
     }
     Enums: {
