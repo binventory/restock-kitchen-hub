@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 
 export function CookScreen() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [diet, setDiet] = useState("any");
