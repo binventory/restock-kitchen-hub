@@ -61,9 +61,11 @@ export function InventoryGroupedView({ items, onSelect, onDeleted }: Props) {
           className="flex w-full items-center gap-2 p-3 text-sm font-semibold"
         >
           {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          <span>{emoji}</span>
-          <span>{name}</span>
-          <span className="text-muted-foreground font-normal">({list.length})</span>
+          <span className="text-base">{emoji ?? SECTION_ICON[name] ?? "📦"}</span>
+          <span className="flex-1 text-left">{name}</span>
+          <span className="text-xs font-normal rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+            {list.length} items
+          </span>
           {hasLow && <span className="h-2 w-2 rounded-full bg-orange-500" />}
         </button>
         {isOpen && (
