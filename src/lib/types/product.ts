@@ -35,6 +35,13 @@ export interface OffProduct {
   ingredients_text: string | null;
   ingredients_analysis: string[];
   available_stores: string[];
+  name_en?: string | null;
+  name_fr?: string | null;
+  name_ar?: string | null;
+  name_de?: string | null;
+  keywords?: string[] | null;
+  categories_tags?: string[] | null;
+  food_groups_tags?: string[] | null;
 }
 
 export interface ResolvedProduct extends OffProduct {
