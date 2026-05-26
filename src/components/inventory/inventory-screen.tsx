@@ -22,7 +22,7 @@ export function InventoryScreen() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"name" | "qty_asc" | "low_first">("name");
   const [filter, setFilter] = useState<"all" | "low" | "out">("all");
-  const [view, setView] = useState<"list" | "grouped">("list");
+  const [view, setView] = useState<"list" | "grouped">("grouped");
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [selectedProduct, setSelectedProduct] = useState<ResolvedProduct | null>(null);
 
