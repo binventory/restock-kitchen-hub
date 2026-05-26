@@ -7,9 +7,9 @@
   },
   "app": { "name": "ريستوك", "tagline": "مطبخك، أذكى." },
   "nav": { "inventory": "المخزون", "shopping": "التسوق", "cook": "طبخ", "settings": "الإعدادات" },
-  "inventory": { "title": "المخزون", "empty": "مخزونك فارغ. امسح منتج للبدء.", "emptyTitle": "مخزونك فارغ", "emptyHint": "امسح منتج للبدء.", "lowStock": "مخزون منخفض", "outOfStock": "نفد المخزون" },
-  "shopping": { "title": "قائمة التسوق", "empty": "لا شيء للشراء بعد." },
-  "cook": { "title": "طبخ", "empty": "أفكار وصفات بالذكاء الاصطناعي قريباً." },
+  "inventory": { "title": "المخزون", "titleAccent": "مباشر", "lastSyncedLabel": "تمت المزامنة الآن", "empty": "مخزونك فارغ. امسح منتج للبدء.", "emptyTitle": "مخزونك فارغ", "emptyHint": "امسح منتج للبدء.", "lowStock": "مخزون منخفض", "outOfStock": "نفد المخزون" },
+  "shopping": { "title": "قائمة", "titleAccent": "التسوق", "empty": "لا شيء للشراء بعد." },
+  "cook": { "title": "طبخ", "titleAccent": "ذكي", "empty": "أفكار وصفات بالذكاء الاصطناعي قريباً." },
   "settings": {
     "title": "الإعدادات",
     "profile": "ملفي", "preferences": "التفضيلات", "households": "منازلي",

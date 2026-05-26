@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ChefHat, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,6 +15,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 
 export function CookScreen() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const [prompt, setPrompt] = useState("");
   const [diet, setDiet] = useState("any");
@@ -64,9 +66,14 @@ export function CookScreen() {
   return (
     <AppShell>
       <div className="mx-auto max-w-2xl p-4 space-y-4">
-        <div className="flex items-center gap-2">
-          <ChefHat className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">AI Cook</h1>
+        <div className="flex items-center gap-3">
+          <ChefHat className="h-7 w-7 text-primary" />
+          <h1 className="text-4xl sm:text-5xl tracking-tight leading-none">
+            <span className="font-semibold">{t("cook.title")}</span>{" "}
+            <span className="font-display italic text-primary">
+              {t("cook.titleAccent", { defaultValue: "" })}
+            </span>
+          </h1>
         </div>
         <p className="text-sm text-muted-foreground">
           Tell me what you'd like to cook. I'll suggest recipes using what's in

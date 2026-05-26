@@ -10,6 +10,7 @@ import { InventoryControls } from "./inventory-controls";
 import { InventoryListView } from "./inventory-list-view";
 import { InventoryGroupedView } from "./inventory-grouped-view";
 import { ProductPage } from "@/components/product/product-page";
+import { LivePill } from "@/components/ui/live-pill";
 import type { ResolvedProduct } from "@/lib/types/product";
 
 const PAGE_SIZE = 20;
@@ -76,7 +77,20 @@ export function InventoryScreen() {
 
   return (
     <div className="mx-auto max-w-3xl p-4 space-y-4">
-      <h1 className="text-2xl font-bold">{t("inventory.title")}</h1>
+      <div className="space-y-1">
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-4xl sm:text-5xl tracking-tight leading-none">
+            <span className="font-semibold">{t("inventory.title")}</span>{" "}
+            <span className="font-display italic text-primary">
+              {t("inventory.titleAccent", { defaultValue: "" })}
+            </span>
+          </h1>
+          <LivePill />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {t("inventory.lastSyncedLabel", { defaultValue: "" })}
+        </p>
+      </div>
       <LowStockBar householdId={current.id} onSelectProduct={setSelectedProduct} />
       <InventoryControls
         search={search}

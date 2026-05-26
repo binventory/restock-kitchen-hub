@@ -161,7 +161,12 @@ export function ShoppingScreen() {
 
   return (
     <div className="mx-auto max-w-3xl p-4 space-y-4">
-      <h1 className="text-2xl font-bold">{t("shopping.title")}</h1>
+      <h1 className="text-4xl sm:text-5xl tracking-tight leading-none">
+        <span className="font-semibold">{t("shopping.title")}</span>{" "}
+        <span className="font-display italic text-primary">
+          {t("shopping.titleAccent", { defaultValue: "" })}
+        </span>
+      </h1>
       {!online && <div className="rounded-lg bg-orange-100 dark:bg-orange-950/30 px-3 py-2 text-sm">📴 Offline</div>}
       <section>
         <p className="text-sm font-semibold mb-2">To Buy ({toBuy.length})</p>
