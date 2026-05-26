@@ -9,9 +9,9 @@
   "nav": {
     "inventory": "Stock", "shopping": "Shopping", "cook": "Cook", "settings": "Settings"
   },
-  "inventory": { "title": "Stock", "empty": "Your stock is empty. Scan a product to start.", "emptyTitle": "Your stock is empty", "emptyHint": "Scan a product to start", "lowStock": "Low stock", "outOfStock": "Out of stock" },
-  "shopping": { "title": "Shopping list", "empty": "Nothing to buy yet." },
-  "cook": { "title": "Cook", "empty": "AI recipe ideas coming soon." },
+  "inventory": { "title": "Stock", "titleAccent": "live", "lastSyncedLabel": "Synced just now", "empty": "Your stock is empty. Scan a product to start.", "emptyTitle": "Your stock is empty", "emptyHint": "Scan a product to start", "lowStock": "Low stock", "outOfStock": "Out of stock" },
+  "shopping": { "title": "Shopping", "titleAccent": "list", "empty": "Nothing to buy yet." },
+  "cook": { "title": "AI", "titleAccent": "Cook", "empty": "AI recipe ideas coming soon." },
   "settings": {
     "title": "Settings",
     "profile": "My profile", "preferences": "Preferences", "households": "My households",
