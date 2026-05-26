@@ -7,9 +7,9 @@
   },
   "app": { "name": "Restock", "tagline": "Deine Küche, smarter." },
   "nav": { "inventory": "Bestand", "shopping": "Einkauf", "cook": "Kochen", "settings": "Einstellungen" },
-  "inventory": { "title": "Bestand", "empty": "Dein Bestand ist leer. Scanne ein Produkt zum Start.", "emptyTitle": "Dein Bestand ist leer", "emptyHint": "Scanne ein Produkt zum Start.", "lowStock": "Niedriger Bestand", "outOfStock": "Nicht vorrätig" },
-  "shopping": { "title": "Einkaufsliste", "empty": "Noch nichts zu kaufen." },
-  "cook": { "title": "Kochen", "empty": "KI-Rezeptideen kommen bald." },
+  "inventory": { "title": "Bestand", "titleAccent": "live", "lastSyncedLabel": "Gerade synchronisiert", "empty": "Dein Bestand ist leer. Scanne ein Produkt zum Start.", "emptyTitle": "Dein Bestand ist leer", "emptyHint": "Scanne ein Produkt zum Start.", "lowStock": "Niedriger Bestand", "outOfStock": "Nicht vorrätig" },
+  "shopping": { "title": "Einkaufs", "titleAccent": "liste", "empty": "Noch nichts zu kaufen." },
+  "cook": { "title": "KI", "titleAccent": "Küche", "empty": "KI-Rezeptideen kommen bald." },
   "settings": {
     "title": "Einstellungen",
     "profile": "Mein Profil", "preferences": "Präferenzen", "households": "Meine Haushalte",
