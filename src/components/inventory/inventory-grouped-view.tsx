@@ -6,6 +6,19 @@ import { InventoryMergedRow } from "./inventory-merged-row";
 import type { InventoryItem } from "@/lib/services/inventory-service";
 import type { ResolvedProduct } from "@/lib/types/product";
 
+const SECTION_ICON: Record<string, string> = {
+  Drinks: "🥤",
+  Dairy: "🥛",
+  Fruits: "🍎",
+  Vegetables: "🥦",
+  Bakery: "🍞",
+  Snacks: "🍬",
+  Frozen: "❄️",
+  Food: "🍽️",
+  Condiments: "🧂",
+  Other: "📦",
+};
+
 interface Section {
   id: string;
   name: string;
