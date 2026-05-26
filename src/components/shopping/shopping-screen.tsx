@@ -110,6 +110,7 @@ export function ShoppingScreen() {
             1,
             "pieces",
             item.product?.name,
+            null,
           );
         void qc.invalidateQueries({ queryKey: qk.inventory(item.household_id) });
       }
