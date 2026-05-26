@@ -189,30 +189,74 @@ export function ProductInventoryControls({ product, householdId }: Props) {
 
   if (row) {
     const isLow = row.quantity <= row.limit_threshold;
+    const updateLimit = async (newLimit: number) => {
+      if (busy) return;
+      setBusy(true);
+      const safe = Math.max(0, newLimit);
+      setRow({ ...row, limit_threshold: safe });
+      const { error } = await supabase
+        .from("inventory")
+        .update({ limit_threshold: safe })
+        .eq("id", row.id);
+      if (error) {
+        toast.error("Could not update limit");
+      } else {
+        void qc.invalidateQueries({ queryKey: qk.inventory(householdId) });
+      }
+      setBusy(false);
+    };
+
     return (
-      <div className="rounded-xl border p-4 space-y-3">
+      <div className="rounded-xl border p-4 space-y-4">
         <p className="text-sm font-semibold">In your stock</p>
-        <div className="flex items-center justify-center gap-3">
-          <button
-            disabled={busy}
-            onClick={() => void change(-1)}
-            className="h-10 w-10 grid place-items-center rounded-full bg-muted disabled:opacity-50"
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-          <span className="text-2xl font-bold min-w-[3ch] text-center">{row.quantity}</span>
-          <button
-            disabled={busy}
-            onClick={() => void change(1)}
-            className="h-10 w-10 grid place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
+
+        {/* Quantity controls */}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Quantity</p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              disabled={busy}
+              onClick={() => void change(-1)}
+              className="h-10 w-10 grid place-items-center rounded-full bg-muted disabled:opacity-50"
+            >
+              <Minus className="h-4 w-4" />
+            </button>
+            <span className="text-2xl font-bold min-w-[3ch] text-center">{row.quantity}</span>
+            <button
+              disabled={busy}
+              onClick={() => void change(1)}
+              className="h-10 w-10 grid place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-50"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        {isLow && <p className="text-xs text-orange-600 text-center">⚠️ Low stock (limit: {row.limit_threshold})</p>}
+
+        {/* Alert limit (editable) */}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Alert when stock reaches</p>
+          <Input
+            type="number"
+            min="0"
+            value={row.limit_threshold}
+            onChange={(e) => void updateLimit(Math.max(0, Number(e.target.value)))}
+            disabled={busy}
+            className="text-center"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Below this number the product moves to your shopping list automatically.
+          </p>
+        </div>
+
+        {isLow && (
+          <p className="text-xs text-orange-600 text-center">
+            ⚠️ Low stock — added to shopping list
+          </p>
+        )}
       </div>
     );
   }
+
 
   return (
     <div className="rounded-xl border p-4 space-y-3">
