@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ChefHat, Sparkles, Loader2 } from "lucide-react";
+import { ChefHat, Sparkles, Loader2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -26,12 +26,12 @@ export function CookScreen() {
     quota: number;
   } | null>(null);
 
-  const submit = async () => {
+  const runRequest = async (text: string) => {
     if (!session?.access_token) {
       toast.error("Please sign in");
       return;
     }
-    if (prompt.trim().length < 3) {
+    if (text.trim().length < 3) {
       toast.error("Tell me what you want to cook");
       return;
     }
@@ -46,7 +46,7 @@ export function CookScreen() {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          prompt: prompt.trim(),
+          prompt: text.trim(),
           diet: diet === "any" ? undefined : diet,
         }),
       });
@@ -76,17 +76,31 @@ export function CookScreen() {
           </h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Tell me what you'd like to cook. I'll suggest recipes using what's in
-          your stock.
+          Tap one button. I'll suggest recipes using what's in your stock.
         </p>
-        <div className="space-y-2">
-          <Textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="e.g. Something warm and easy for tonight..."
-            rows={3}
-            maxLength={500}
-          />
+
+        <div className="space-y-3">
+          {/* PRIMARY: one-tap cook */}
+          <Button
+            onClick={() => void runRequest("Suggest 3 recipes using my stock")}
+            disabled={loading}
+            size="lg"
+            className="w-full h-14 text-base"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Thinking...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-5 w-5 mr-2" />
+                Cook with what I have
+              </>
+            )}
+          </Button>
+
+          {/* Diet filter */}
           <Select value={diet} onValueChange={setDiet}>
             <SelectTrigger>
               <SelectValue />
@@ -97,26 +111,37 @@ export function CookScreen() {
               <SelectItem value="vegetarian">Vegetarian</SelectItem>
               <SelectItem value="vegan">Vegan</SelectItem>
               <SelectItem value="gluten_free">Gluten-free</SelectItem>
+              <SelectItem value="low_fat">Low fat</SelectItem>
+              <SelectItem value="low_sugar">Low sugar</SelectItem>
+              <SelectItem value="keto">Keto</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            onClick={() => void submit()}
-            disabled={loading}
-            className="w-full"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Thinking...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Cook with what I have
-              </>
-            )}
-          </Button>
+
+          <details className="rounded-xl border bg-card">
+            <summary className="cursor-pointer select-none p-3 text-sm font-medium flex items-center justify-between">
+              Or give me specific instructions
+              <ChevronDown className="h-4 w-4" />
+            </summary>
+            <div className="p-3 pt-0 space-y-2">
+              <Textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="e.g. I want Asian food / Egyptian / something quick..."
+                rows={3}
+                maxLength={500}
+              />
+              <Button
+                variant="outline"
+                onClick={() => void runRequest(prompt)}
+                disabled={loading || prompt.trim().length < 3}
+                className="w-full"
+              >
+                Get custom suggestion
+              </Button>
+            </div>
+          </details>
         </div>
+
         {recipe && (
           <div className="rounded-xl border p-4 space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
