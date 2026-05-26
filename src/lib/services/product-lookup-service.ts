@@ -129,33 +129,31 @@ export async function lookupBarcode(
   // OFF rows, never user-tampered data.
   const off = await fetchFromOpenFoodFacts(barcode);
   if (off) {
-    const insertRow = {
-      ...off,
-      source: "openfoodfacts" as const,
-      is_approved: true,
-      submitted_by_user_id: null,
-    };
-    const { data: inserted } = await supabase
-      .from("products")
-      .insert(insertRow)
-      .select("*")
-      .single();
-    if (inserted) {
-      return rowToResolved(inserted, "global", "products");
+    // Call SECURITY DEFINER RPC instead of direct INSERT.
+    const { data: insertedId, error: rpcErr } = await supabase.rpc(
+      "ingest_off_product" as never,
+      {
+        _payload: off as unknown as Record<string, unknown>,
+      } as never,
+    );
+
+    if (insertedId && !rpcErr) {
+      const { data: row } = await supabase
+        .from("products")
+        .select("*")
+        .eq("id", insertedId as unknown as string)
+        .maybeSingle();
+      if (row) return rowToResolved(row, "global", "products");
     }
-    // If the insert failed (e.g. another device just inserted the same
-    // barcode), re-fetch the existing approved row.
+
     const { data: existing } = await supabase
       .from("products")
       .select("*")
       .eq("barcode", barcode)
       .eq("is_approved", true)
       .maybeSingle();
-    if (existing) {
-      return rowToResolved(existing, "global", "products");
-    }
-    // Absolute last resort: return an off_ temp id so the product page
-    // still opens with OFF data. The user can then add it manually.
+    if (existing) return rowToResolved(existing, "global", "products");
+
     return {
       id: `off_${barcode}`,
       type: "global" as const,
