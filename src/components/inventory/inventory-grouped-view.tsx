@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { ItemCard } from "./item-card";
+import { InventoryMergedRow } from "./inventory-merged-row";
 import type { InventoryItem } from "@/lib/services/inventory-service";
 import type { ResolvedProduct } from "@/lib/types/product";
 
@@ -54,9 +55,23 @@ export function InventoryGroupedView({ items, onSelect, onDeleted }: Props) {
         </button>
         {isOpen && (
           <div className="p-2 space-y-2 border-t">
-            {list.map((it) => (
-              <ItemCard key={it.id} item={it} onSelect={onSelect} onDeleted={onDeleted} />
-            ))}
+            {mergeByName(list).map((group, idx) =>
+              group.length === 1 ? (
+                <ItemCard
+                  key={group[0].id}
+                  item={group[0]}
+                  onSelect={onSelect}
+                  onDeleted={onDeleted}
+                />
+              ) : (
+                <InventoryMergedRow
+                  key={`merged-${idx}`}
+                  items={group}
+                  onSelect={onSelect}
+                  onDeleted={onDeleted}
+                />
+              ),
+            )}
           </div>
         )}
       </div>
@@ -69,4 +84,27 @@ export function InventoryGroupedView({ items, onSelect, onDeleted }: Props) {
       {byS["other"] && renderSection("other", "Other", "📦")}
     </div>
   );
+}
+
+function normalizeName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z\u00C0-\u017F\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length >= 4)
+    .sort()
+    .join(" ")
+    .trim();
+}
+
+function mergeByName(items: InventoryItem[]): InventoryItem[][] {
+  const groups = new Map<string, InventoryItem[]>();
+  for (const it of items) {
+    const name = it.product?.name ?? "";
+    const key = normalizeName(name) || it.id;
+    const bucket = groups.get(key) ?? [];
+    bucket.push(it);
+    groups.set(key, bucket);
+  }
+  return Array.from(groups.values());
 }
