@@ -122,9 +122,9 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
                 Custom
               </span>
             ) : null}
-            {item.product?.available_stores?.[0] && (
+            {(item.product as { available_stores?: string[] } | null)?.available_stores?.[0] && (
               <span className="inline-flex items-center text-[10px] font-medium border border-border bg-card text-muted-foreground px-1.5 py-0.5 rounded">
-                🛒 {item.product.available_stores[0]}
+                🛒 {(item.product as { available_stores?: string[] }).available_stores![0]}
               </span>
             )}
           </div>
