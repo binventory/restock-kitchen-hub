@@ -141,6 +141,29 @@ function AuthSync() {
   return null;
 }
 
+function SWRegister() {
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    let inIframe = false;
+    try {
+      inIframe = window.self !== window.top;
+    } catch {
+      inIframe = true;
+    }
+    const host = window.location.hostname;
+    const isPreview =
+      host.includes("id-preview--") ||
+      host.includes("lovableproject.com") ||
+      host.includes("lovable.dev");
+    if (inIframe || isPreview) {
+      navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+      return;
+    }
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, []);
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
@@ -150,6 +173,7 @@ function RootComponent() {
           <AuthProvider>
             <HouseholdProvider>
               <AuthSync />
+              <SWRegister />
               <Outlet />
             </HouseholdProvider>
           </AuthProvider>
