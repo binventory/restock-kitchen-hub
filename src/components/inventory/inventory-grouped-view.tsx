@@ -55,15 +55,15 @@ export function InventoryGroupedView({ items, onSelect, onDeleted }: Props) {
     const hasLow = list.some((i) => i.quantity <= i.limit_threshold);
     const isOpen = open[id] ?? true;
     return (
-      <div key={id} className="rounded-xl border">
+      <div key={id} className="rounded-xl border bg-card/50">
         <button
           onClick={() => setOpen({ ...open, [id]: !isOpen })}
-          className="flex w-full items-center gap-2 p-3 text-sm font-semibold"
+          className="flex w-full items-center gap-2 p-3 text-sm font-semibold bg-muted/30 rounded-t-xl"
         >
           {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           <span className="text-base">{emoji ?? SECTION_ICON[name] ?? "📦"}</span>
-          <span className="flex-1 text-left">{name}</span>
-          <span className="text-xs font-normal rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+          <span className="flex-1 text-left font-bold">{name}</span>
+          <span className="text-xs font-medium rounded-full bg-background border px-2 py-0.5 text-muted-foreground">
             {list.length} items
           </span>
           {hasLow && <span className="h-2 w-2 rounded-full bg-orange-500" />}

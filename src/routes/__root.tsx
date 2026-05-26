@@ -90,9 +90,49 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
+    meta: [
+      { charSet: "utf-8" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+      },
+      { name: "theme-color", content: "#16a34a" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "Restock" },
+      { title: "Restock — Your kitchen, smarter." },
+      {
+        name: "description",
+        content: "Smart kitchen stock. Scan, track, shop, and cook with AI.",
+      },
+      { property: "og:title", content: "Restock — Your kitchen, smarter." },
+      { name: "twitter:title", content: "Restock — Your kitchen, smarter." },
+      {
+        property: "og:description",
+        content: "Smart kitchen stock. Scan, track, shop, and cook with AI.",
+      },
+      {
+        name: "twitter:description",
+        content: "Smart kitchen stock. Scan, track, shop, and cook with AI.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6a56a314-7714-413f-af5a-7aa06accc0d8/id-preview-970dac81--b3a7642b-1186-4915-b620-02f2347e8237.lovable.app-1779258681434.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/6a56a314-7714-413f-af5a-7aa06accc0d8/id-preview-970dac81--b3a7642b-1186-4915-b620-02f2347e8237.lovable.app-1779258681434.png",
+      },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
+    ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", href: "/logo.png", type: "image/png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
