@@ -919,6 +919,13 @@ export type Database = {
             referencedRelation: "popup_notifications"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "popup_seen_popup_id_fkey"
+            columns: ["popup_id"]
+            isOneToOne: false
+            referencedRelation: "popup_notifications_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       product_groups: {
@@ -1921,7 +1928,6 @@ export type Database = {
       offers_public: {
         Row: {
           clicks_count: number | null
-          coupon_code: string | null
           description: string | null
           discount_value: number | null
           ends_at: string | null
@@ -1941,7 +1947,6 @@ export type Database = {
         }
         Insert: {
           clicks_count?: number | null
-          coupon_code?: string | null
           description?: string | null
           discount_value?: number | null
           ends_at?: string | null
@@ -1961,7 +1966,6 @@ export type Database = {
         }
         Update: {
           clicks_count?: number | null
-          coupon_code?: string | null
           description?: string | null
           discount_value?: number | null
           ends_at?: string | null
@@ -2003,6 +2007,60 @@ export type Database = {
           },
         ]
       }
+      popup_notifications_public: {
+        Row: {
+          coupon_id: string | null
+          ends_at: string | null
+          id: string | null
+          is_active: boolean | null
+          message: string | null
+          referral_link_enabled: boolean | null
+          starts_at: string | null
+          target_plan: string | null
+          title: string | null
+          type: string | null
+        }
+        Insert: {
+          coupon_id?: string | null
+          ends_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          message?: string | null
+          referral_link_enabled?: boolean | null
+          starts_at?: string | null
+          target_plan?: string | null
+          title?: string | null
+          type?: string | null
+        }
+        Update: {
+          coupon_id?: string | null
+          ends_at?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          message?: string | null
+          referral_link_enabled?: boolean | null
+          starts_at?: string | null
+          target_plan?: string | null
+          title?: string | null
+          type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "popup_notifications_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "popup_notifications_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_invite: { Args: { _token: string }; Returns: string }
@@ -2019,6 +2077,7 @@ export type Database = {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
       }
+      ingest_off_product: { Args: { _payload: Json }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_household_admin: {
         Args: { _household_id: string; _user_id: string }
