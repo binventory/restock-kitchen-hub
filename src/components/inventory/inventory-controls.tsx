@@ -62,15 +62,6 @@ export function InventoryControls(p: Props) {
           <option value="qty_asc">Quantity low-high</option>
           <option value="low_first">Low stock first</option>
         </select>
-        <select
-          value={p.filter}
-          onChange={(e) => p.onFilter(e.target.value as "all")}
-          className="rounded-md border bg-background px-2 py-1.5 text-sm"
-        >
-          <option value="all">All</option>
-          <option value="low">Low stock</option>
-          <option value="out">Out of stock</option>
-        </select>
         <div className="ms-auto flex">
           <Button
             size="icon"
