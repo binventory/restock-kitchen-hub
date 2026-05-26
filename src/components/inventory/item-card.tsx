@@ -67,6 +67,11 @@ export function ItemCard({ item, onSelect, onDeleted }: Props) {
 
   const isOut = qty === 0;
   const isLow = qty > 0 && qty <= item.limit_threshold;
+  const badge = isOut
+    ? { text: "RESTOCK", className: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300" }
+    : isLow
+      ? { text: `Qty: ${qty}`, className: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300" }
+      : { text: `Qty: ${qty}`, className: "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300" };
 
   return (
     <div className="relative overflow-hidden rounded-xl">
@@ -107,18 +112,8 @@ export function ItemCard({ item, onSelect, onDeleted }: Props) {
           <p className="font-semibold truncate text-sm">{item.product?.name ?? "—"}</p>
           {item.product?.brand && <p className="text-xs text-muted-foreground truncate">{item.product.brand}</p>}
           <div className="flex gap-1 mt-1">
-            {isOut && (
-              <span className="text-[10px] bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 px-1.5 py-0.5 rounded">
-                Out
-              </span>
-            )}
-            {isLow && (
-              <span className="text-[10px] bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 px-1.5 py-0.5 rounded">
-                Low
-              </span>
-            )}
-            <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-              {item.product_id ? "Global Database" : "User Item"}
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${badge.className}`}>
+              {badge.text}
             </span>
           </div>
         </div>

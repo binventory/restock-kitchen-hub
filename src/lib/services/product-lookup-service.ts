@@ -121,39 +121,12 @@ export async function lookupBarcode(
     // Server function unavailable — fall through.
   }
 
-  // Step 4b. Client-side fallback when the server function is unavailable
-  // (e.g. SUPABASE_SERVICE_ROLE_KEY not configured). Authenticated users
-  // can INSERT into products via the "openfoodfacts insert" RLS policy,
-  // which enforces source='openfoodfacts', is_approved=true, and
-  // submitted_by_user_id IS NULL — so this path can only create validated
-  // OFF rows, never user-tampered data.
+  // 4b. If the server fn returned no product, OFF didn't know the barcode.
+  // The client can no longer insert into the global products table (security).
+  // Fetch OFF data directly so the caller can show the product page (read-only)
+  // while persistence is exclusively a server-side concern.
   const off = await fetchFromOpenFoodFacts(barcode);
   if (off) {
-    // Call SECURITY DEFINER RPC instead of direct INSERT.
-    const { data: insertedId, error: rpcErr } = await supabase.rpc(
-      "ingest_off_product" as never,
-      {
-        _payload: off as unknown as Record<string, unknown>,
-      } as never,
-    );
-
-    if (insertedId && !rpcErr) {
-      const { data: row } = await supabase
-        .from("products")
-        .select("*")
-        .eq("id", insertedId as unknown as string)
-        .maybeSingle();
-      if (row) return rowToResolved(row, "global", "products");
-    }
-
-    const { data: existing } = await supabase
-      .from("products")
-      .select("*")
-      .eq("barcode", barcode)
-      .eq("is_approved", true)
-      .maybeSingle();
-    if (existing) return rowToResolved(existing, "global", "products");
-
     return {
       id: `off_${barcode}`,
       type: "global" as const,
@@ -165,3 +138,4 @@ export async function lookupBarcode(
   // Truly not found anywhere — let the caller offer "Add new product".
   return null;
 }
+
