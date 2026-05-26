@@ -193,9 +193,12 @@ export type Database = {
         Row: {
           cost_usd: number | null
           created_at: string
+          feature: string | null
           household_id: string | null
           id: string
+          latency_ms: number | null
           model: string | null
+          prompt_length: number | null
           provider: string | null
           request_type: string | null
           tokens_input: number | null
@@ -206,9 +209,12 @@ export type Database = {
         Insert: {
           cost_usd?: number | null
           created_at?: string
+          feature?: string | null
           household_id?: string | null
           id?: string
+          latency_ms?: number | null
           model?: string | null
+          prompt_length?: number | null
           provider?: string | null
           request_type?: string | null
           tokens_input?: number | null
@@ -219,9 +225,12 @@ export type Database = {
         Update: {
           cost_usd?: number | null
           created_at?: string
+          feature?: string | null
           household_id?: string | null
           id?: string
+          latency_ms?: number | null
           model?: string | null
+          prompt_length?: number | null
           provider?: string | null
           request_type?: string | null
           tokens_input?: number | null
@@ -982,6 +991,7 @@ export type Database = {
           fat_100g: number | null
           fiber_100g: number | null
           food_group: string | null
+          food_groups_tags: string[] | null
           generic_name: string | null
           halal_certified: boolean | null
           has_palm_oil: boolean | null
@@ -993,8 +1003,13 @@ export type Database = {
           is_gluten_free: boolean | null
           is_vegan: boolean | null
           is_vegetarian: boolean | null
+          keywords: string[] | null
           labels: string[] | null
           name: string
+          name_ar: string | null
+          name_de: string | null
+          name_en: string | null
+          name_fr: string | null
           nova_group: number | null
           nutrient_levels: Json | null
           nutriscore: Database["public"]["Enums"]["nutriscore_grade"] | null
@@ -1026,6 +1041,7 @@ export type Database = {
           fat_100g?: number | null
           fiber_100g?: number | null
           food_group?: string | null
+          food_groups_tags?: string[] | null
           generic_name?: string | null
           halal_certified?: boolean | null
           has_palm_oil?: boolean | null
@@ -1037,8 +1053,13 @@ export type Database = {
           is_gluten_free?: boolean | null
           is_vegan?: boolean | null
           is_vegetarian?: boolean | null
+          keywords?: string[] | null
           labels?: string[] | null
           name: string
+          name_ar?: string | null
+          name_de?: string | null
+          name_en?: string | null
+          name_fr?: string | null
           nova_group?: number | null
           nutrient_levels?: Json | null
           nutriscore?: Database["public"]["Enums"]["nutriscore_grade"] | null
@@ -1070,6 +1091,7 @@ export type Database = {
           fat_100g?: number | null
           fiber_100g?: number | null
           food_group?: string | null
+          food_groups_tags?: string[] | null
           generic_name?: string | null
           halal_certified?: boolean | null
           has_palm_oil?: boolean | null
@@ -1081,8 +1103,13 @@ export type Database = {
           is_gluten_free?: boolean | null
           is_vegan?: boolean | null
           is_vegetarian?: boolean | null
+          keywords?: string[] | null
           labels?: string[] | null
           name?: string
+          name_ar?: string | null
+          name_de?: string | null
+          name_en?: string | null
+          name_fr?: string | null
           nova_group?: number | null
           nutrient_levels?: Json | null
           nutriscore?: Database["public"]["Enums"]["nutriscore_grade"] | null
@@ -1781,7 +1808,12 @@ export type Database = {
           is_gluten_free: boolean | null
           is_vegan: boolean | null
           is_vegetarian: boolean | null
+          keywords: string[] | null
           name: string
+          name_ar: string | null
+          name_de: string | null
+          name_en: string | null
+          name_fr: string | null
           nova_group: number | null
           nutriscore: Database["public"]["Enums"]["nutriscore_grade"] | null
           price: number | null
@@ -1818,7 +1850,12 @@ export type Database = {
           is_gluten_free?: boolean | null
           is_vegan?: boolean | null
           is_vegetarian?: boolean | null
+          keywords?: string[] | null
           name: string
+          name_ar?: string | null
+          name_de?: string | null
+          name_en?: string | null
+          name_fr?: string | null
           nova_group?: number | null
           nutriscore?: Database["public"]["Enums"]["nutriscore_grade"] | null
           price?: number | null
@@ -1855,7 +1892,12 @@ export type Database = {
           is_gluten_free?: boolean | null
           is_vegan?: boolean | null
           is_vegetarian?: boolean | null
+          keywords?: string[] | null
           name?: string
+          name_ar?: string | null
+          name_de?: string | null
+          name_en?: string | null
+          name_fr?: string | null
           nova_group?: number | null
           nutriscore?: Database["public"]["Enums"]["nutriscore_grade"] | null
           price?: number | null
@@ -2077,7 +2119,6 @@ export type Database = {
         Args: { _permission: string; _user_id: string }
         Returns: boolean
       }
-      ingest_off_product: { Args: { _payload: Json }; Returns: string }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_household_admin: {
         Args: { _household_id: string; _user_id: string }
