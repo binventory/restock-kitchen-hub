@@ -201,9 +201,7 @@ async function autoDetectGroup(
 ): Promise<{ section_id: string | null; product_group_id: string | null }> {
   const { data: groups } = await supabase.from("product_groups").select("id, section_id, keywords");
 
-  const tryKeywordMatch = (
-    text: string,
-  ): { section_id: string | null; product_group_id: string | null } | null => {
+  const tryKeywordMatch = (text: string): { section_id: string | null; product_group_id: string | null } | null => {
     if (!groups) return null;
     const lower = text.toLowerCase();
     for (const g of groups) {
@@ -218,27 +216,35 @@ async function autoDetectGroup(
     return null;
   };
 
-  const byName = tryKeywordMatch(productName);
-  if (byName) return byName;
-
-  if (foodGroup) {
-    const byFoodGroup = tryKeywordMatch(foodGroup);
-    if (byFoodGroup) return byFoodGroup;
-  }
-
+  // CORRECT order — most reliable signal first
+  // Pass 1: hardcoded OFF food_group → section name map.
+  // This is the most reliable signal because it comes directly
+  // from OpenFoodFacts' own official categorization. A biscuit
+  // with food_group="sugary snacks" should ALWAYS go to Snacks,
+  // even if its name contains "chocolat" which also appears in
+  // beverage category keywords.
   if (foodGroup) {
     const sectionName = FOOD_GROUP_TO_SECTION[foodGroup.toLowerCase()];
     if (sectionName) {
-      const { data: section } = await supabase
-        .from("sections")
-        .select("id")
-        .ilike("name", sectionName)
-        .maybeSingle();
+      const { data: section } = await supabase.from("sections").select("id").ilike("name", sectionName).maybeSingle();
       if (section?.id) {
         return { section_id: section.id as string, product_group_id: null };
       }
     }
   }
+
+  // Pass 2: keyword match on the food_group string.
+  if (foodGroup) {
+    const byFoodGroup = tryKeywordMatch(foodGroup);
+    if (byFoodGroup) return byFoodGroup;
+  }
+
+  // Pass 3: keyword match on the product name — last resort only.
+  // This is the least reliable because product names are multilingual
+  // and ambiguous ("Prince Chocolat" would wrongly match a Drinks
+  // keyword "chocolat" if this ran first).
+  const byName = tryKeywordMatch(productName);
+  if (byName) return byName;
 
   return { section_id: null, product_group_id: null };
 }
