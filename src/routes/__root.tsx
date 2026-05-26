@@ -61,7 +61,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "viewport",
         content: "width=device-width, initial-scale=1, viewport-fit=cover",
       },
-      { name: "theme-color", content: "#22c55e" },
+      { name: "theme-color", content: "#16a34a" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "apple-mobile-web-app-title", content: "Restock" },
       { title: "Restock — Your kitchen, smarter." },
       {
         name: "description",
@@ -93,6 +96,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", href: "/logo.png", type: "image/png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -136,6 +141,29 @@ function AuthSync() {
   return null;
 }
 
+function SWRegister() {
+  useEffect(() => {
+    if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
+    let inIframe = false;
+    try {
+      inIframe = window.self !== window.top;
+    } catch {
+      inIframe = true;
+    }
+    const host = window.location.hostname;
+    const isPreview =
+      host.includes("id-preview--") ||
+      host.includes("lovableproject.com") ||
+      host.includes("lovable.dev");
+    if (inIframe || isPreview) {
+      navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));
+      return;
+    }
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, []);
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
@@ -145,6 +173,7 @@ function RootComponent() {
           <AuthProvider>
             <HouseholdProvider>
               <AuthSync />
+              <SWRegister />
               <Outlet />
             </HouseholdProvider>
           </AuthProvider>

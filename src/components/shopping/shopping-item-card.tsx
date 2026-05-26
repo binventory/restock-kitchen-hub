@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Trash2, Minus, Plus } from "lucide-react";
+import { Trash2, Minus, Plus, Check } from "lucide-react";
 import type { ShoppingItem } from "@/lib/services/shopping-service";
 import { fetchFullProduct } from "@/lib/services/inventory-service";
 import type { ResolvedProduct } from "@/lib/types/product";
@@ -21,13 +21,15 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
   const swiping = useRef(false);
 
   const name = item.product?.name ?? item.custom_text ?? "—";
-  const sub = item.product?.brand ?? null;
   const img = item.custom_image_url ?? item.product?.image_url ?? null;
+  const supermarket =
+    (item.product as { available_stores?: string[] } | null)?.available_stores?.[0] ?? null;
+  const note = item.item_note;
+  const neededQty = item.needed_quantity;
 
   const openProduct = async () => {
     if (offset !== 0) return;
     if (!onSelect) return;
-    // Custom items have no DB product to open
     if (!item.product_id && !item.user_product_id) return;
     const full = await fetchFullProduct(item.product_id, item.user_product_id);
     if (full) onSelect(full);
@@ -56,15 +58,17 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
     onDelete(item.id);
     setConfirming(false);
   };
-
   const cancelDelete = () => {
     setOffset(0);
     setConfirming(false);
   };
 
+  const handleQty = (n: number) => {
+    if (onChangeNeeded) onChangeNeeded(item, Math.max(1, n));
+  };
+
   return (
     <div className="relative overflow-hidden rounded-xl">
-      {/* Red delete background revealed by swipe */}
       <div className="absolute inset-y-0 right-0 flex items-center justify-end bg-red-500 px-4 gap-2">
         {confirming ? (
           <>
@@ -80,83 +84,70 @@ export function ShoppingItemCard({ item, onCheck, onDelete, onSelect, onChangeNe
         )}
       </div>
 
-      {/* Foreground card */}
       <div
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         style={{ transform: `translateX(${offset}px)` }}
-        className="flex gap-3 items-start rounded-xl border bg-card p-3 transition-transform"
+        className="flex items-center gap-3 rounded-xl border bg-card p-3 transition-transform"
       >
-        <input
-          type="checkbox"
-          checked={item.is_checked}
-          onChange={(e) => onCheck(item, e.target.checked, item.needed_quantity)}
-          className="h-5 w-5 mt-1"
-          onClick={(e) => e.stopPropagation()}
-        />
-        <div
-          className="h-12 w-12 rounded-md bg-muted overflow-hidden flex-shrink-0 grid place-items-center cursor-pointer"
-          onClick={() => void openProduct()}
-        >
-          {img ? (
-            <img src={img} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-sm font-bold text-muted-foreground">{name[0]}</span>
-          )}
-        </div>
-        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => void openProduct()}>
-          <p className="font-medium text-sm truncate">{name}</p>
-          {sub && <p className="text-xs text-muted-foreground truncate">{sub}</p>}
-          <div className="flex flex-wrap items-center gap-1 mt-0.5">
-            {item.product_id ? (
-              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                Global Database
-              </span>
-            ) : item.user_product_id ? (
-              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                User Item
-              </span>
-            ) : item.custom_text ? (
-              <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 px-1.5 py-0.5 rounded">
-                Custom
-              </span>
-            ) : null}
-            {(item.product as { available_stores?: string[] } | null)?.available_stores?.[0] && (
-              <span className="inline-flex items-center text-[10px] font-medium border border-border bg-card text-muted-foreground px-1.5 py-0.5 rounded">
-                🛒 {(item.product as { available_stores?: string[] }).available_stores![0]}
-              </span>
+        {/* LEFT: image + info */}
+        <div className="flex flex-1 min-w-0 items-center gap-3 cursor-pointer" onClick={() => void openProduct()}>
+          <div className="h-14 w-14 shrink-0 rounded-md bg-muted overflow-hidden grid place-items-center">
+            {img ? (
+              <img src={img} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-sm font-bold text-muted-foreground">{name[0]}</span>
             )}
           </div>
-          {item.item_note && <p className="text-xs text-green-700 dark:text-green-400 truncate">📝 {item.item_note}</p>}
-          <div className="flex items-center gap-2 mt-1">
-            {onChangeNeeded ? (
-              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                <button
-                  onClick={() => onChangeNeeded(item, Math.max(0, item.needed_quantity - 1))}
-                  className="h-7 w-7 grid place-items-center rounded-full bg-muted hover:bg-muted-foreground/20"
-                  aria-label="Decrease needed quantity"
-                >
-                  <Minus className="h-3 w-3" />
-                </button>
-                <span className="min-w-[2ch] text-center text-xs font-medium">{item.needed_quantity}</span>
-                <button
-                  onClick={() => onChangeNeeded(item, item.needed_quantity + 1)}
-                  className="h-7 w-7 grid place-items-center rounded-full bg-primary text-primary-foreground"
-                  aria-label="Increase needed quantity"
-                >
-                  <Plus className="h-3 w-3" />
-                </button>
-              </div>
-            ) : (
-              <span className="text-xs bg-muted px-2 py-0.5 rounded">Need {item.needed_quantity}</span>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sm truncate">{name}</p>
+            {supermarket && (
+              <p className="text-xs text-muted-foreground truncate">📍 {supermarket}</p>
+            )}
+            {note && (
+              <p className="text-xs text-green-700 dark:text-green-400 truncate">📝 {note}</p>
             )}
             {item.added_automatically && (
-              <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-2 py-0.5 rounded">
+              <span className="inline-block mt-0.5 text-[10px] bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 px-1.5 py-0.5 rounded">
                 Auto
               </span>
             )}
           </div>
+        </div>
+
+        {/* RIGHT: quantity controls + check */}
+        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {onChangeNeeded && (
+            <>
+              <button
+                onClick={() => handleQty(neededQty - 1)}
+                className="h-8 w-8 grid place-items-center rounded-full bg-muted hover:bg-muted-foreground/20"
+                aria-label="Decrease"
+              >
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="min-w-[2ch] text-center text-sm font-semibold">{neededQty}</span>
+              <button
+                onClick={() => handleQty(neededQty + 1)}
+                className="h-8 w-8 grid place-items-center rounded-full bg-muted hover:bg-muted-foreground/20"
+                aria-label="Increase"
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+            </>
+          )}
+          <button
+            onClick={() => onCheck(item, !item.is_checked, neededQty)}
+            className={`ml-1 h-9 w-9 grid place-items-center rounded-full ${
+              item.is_checked
+                ? "bg-primary text-primary-foreground"
+                : "border-2 border-primary text-primary"
+            }`}
+            aria-label={item.is_checked ? "Uncheck" : "Check off"}
+          >
+            <Check className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>
