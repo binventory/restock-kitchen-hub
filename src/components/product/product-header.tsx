@@ -1,5 +1,13 @@
 import type { ResolvedProduct } from "@/lib/types/product";
 
+function formatCategory(s: string | null | undefined): string | null {
+  if (!s) return null;
+  return s
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
+
 export function ProductHeader({ product }: { product: ResolvedProduct }) {
   const badge =
     product.type === "global"
@@ -17,11 +25,15 @@ export function ProductHeader({ product }: { product: ResolvedProduct }) {
             color: "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300",
           };
 
+  const category = formatCategory(product.food_group) ?? formatCategory(product.category);
+
   return (
     <div className="flex flex-col items-center text-center">
       {/* Picture */}
       <div className="h-40 w-40 rounded-xl bg-muted overflow-hidden">
-        {product.image_url && <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />}
+        {product.image_url && (
+          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+        )}
       </div>
 
       {/* Name */}
@@ -35,7 +47,15 @@ export function ProductHeader({ product }: { product: ResolvedProduct }) {
       )}
       {product.barcode && <p className="text-xs text-muted-foreground font-mono mt-1">{product.barcode}</p>}
 
-      {/* Supermarkt — where to find it */}
+      {/* Category + Source badges */}
+      <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+        {category && (
+          <span className="text-xs px-2 py-1 rounded bg-muted text-foreground">🏷 {category}</span>
+        )}
+        <span className={`text-xs px-2 py-1 rounded ${badge.color}`}>{badge.text}</span>
+      </div>
+
+      {/* Available stores */}
       {product.available_stores.length > 0 && (
         <div className="mt-3">
           <p className="text-xs text-muted-foreground mb-1">Available at</p>
@@ -48,9 +68,6 @@ export function ProductHeader({ product }: { product: ResolvedProduct }) {
           </div>
         </div>
       )}
-
-      {/* Database — source badge */}
-      <span className={`text-xs px-2 py-1 rounded mt-3 ${badge.color}`}>{badge.text}</span>
     </div>
   );
 }

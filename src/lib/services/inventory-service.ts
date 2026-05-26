@@ -148,14 +148,64 @@ export async function fetchFullProduct(
   };
 }
 
+const FOOD_GROUP_TO_SECTION: Record<string, string> = {
+  "milk and yogurt": "Dairy",
+  cheese: "Dairy",
+  dairy: "Dairy",
+  beverages: "Drinks",
+  "unsweetened beverages": "Drinks",
+  "sweetened beverages": "Drinks",
+  "artificially sweetened beverages": "Drinks",
+  "fruit juices": "Drinks",
+  "waters and flavored waters": "Drinks",
+  "teas and herbal teas and coffees": "Drinks",
+  "alcoholic beverages": "Drinks",
+  fruits: "Fruits",
+  "fruits and vegetables": "Vegetables",
+  vegetables: "Vegetables",
+  legumes: "Vegetables",
+  "dried fruits": "Snacks",
+  nuts: "Snacks",
+  "sugary snacks": "Snacks",
+  "biscuits and cakes": "Snacks",
+  "ice cream": "Frozen",
+  "frozen food": "Frozen",
+  "salty snacks": "Snacks",
+  "chocolate products": "Snacks",
+  sweets: "Snacks",
+  appetizers: "Snacks",
+  "fish and meat and eggs": "Food",
+  meat: "Food",
+  "processed meat": "Food",
+  "fish and seafood": "Food",
+  offals: "Food",
+  eggs: "Food",
+  "cereals and potatoes": "Bakery",
+  bread: "Bakery",
+  "breakfast cereals": "Bakery",
+  pastries: "Bakery",
+  "pasta and rice and pulses": "Food",
+  potatoes: "Vegetables",
+  "fats and sauces": "Condiments",
+  fats: "Condiments",
+  "dressings and sauces": "Condiments",
+  "one dish meals": "Food",
+  "pizza pies and quiches": "Food",
+  sandwiches: "Food",
+  "composite foods": "Food",
+};
+
 async function autoDetectGroup(
   productName: string,
   foodGroup: string | null,
 ): Promise<{ section_id: string | null; product_group_id: string | null }> {
   const { data: groups } = await supabase.from("product_groups").select("id, section_id, keywords");
-  if (!groups) return { section_id: null, product_group_id: null };
-  const tryMatch = (haystack: string) => {
-    const lower = haystack.toLowerCase();
+
+  const tryKeywordMatch = (
+    text: string,
+  ): { section_id: string | null; product_group_id: string | null } | null => {
+    if (!groups) return null;
+    const lower = text.toLowerCase();
     for (const g of groups) {
       const kw = (g.keywords as string[] | null) ?? [];
       if (kw.some((k) => lower.includes(k.toLowerCase()))) {
@@ -167,12 +217,29 @@ async function autoDetectGroup(
     }
     return null;
   };
-  const byName = tryMatch(productName);
+
+  const byName = tryKeywordMatch(productName);
   if (byName) return byName;
+
   if (foodGroup) {
-    const byFoodGroup = tryMatch(foodGroup);
+    const byFoodGroup = tryKeywordMatch(foodGroup);
     if (byFoodGroup) return byFoodGroup;
   }
+
+  if (foodGroup) {
+    const sectionName = FOOD_GROUP_TO_SECTION[foodGroup.toLowerCase()];
+    if (sectionName) {
+      const { data: section } = await supabase
+        .from("sections")
+        .select("id")
+        .ilike("name", sectionName)
+        .maybeSingle();
+      if (section?.id) {
+        return { section_id: section.id as string, product_group_id: null };
+      }
+    }
+  }
+
   return { section_id: null, product_group_id: null };
 }
 
@@ -189,10 +256,8 @@ export async function updateQuantity(itemId: string, newQty: number): Promise<vo
 
   if (!row) return;
   const limit = Number(row.limit_threshold);
-  const wasAbove = Number(row.quantity) > limit;
-  const nowBelow = safe <= limit;
 
-  if (!wasAbove || !nowBelow) return;
+  if (safe > limit) return;
 
   const col = row.product_id ? "product_id" : "user_product_id";
   const refId = row.product_id ?? row.user_product_id;
