@@ -108,6 +108,19 @@ export const ingestOpenFoodFactsProduct = createServerFn({ method: "POST" })
         str("ingredients_text_en") ?? str("ingredients_text"),
       ingredients_analysis: analysis,
       available_stores: rawTags("stores_tags"),
+      name_en: (p["product_name_en"] as string) || null,
+      name_fr: (p["product_name_fr"] as string) || null,
+      name_ar: (p["product_name_ar"] as string) || null,
+      name_de: (p["product_name_de"] as string) || null,
+      keywords: Array.isArray(p["_keywords"])
+        ? (p["_keywords"] as string[]).slice(0, 50)
+        : null,
+      categories_tags: Array.isArray(p["categories_tags"])
+        ? (p["categories_tags"] as string[]).slice(0, 20)
+        : null,
+      food_groups_tags: Array.isArray(p["food_groups_tags"])
+        ? (p["food_groups_tags"] as string[]).slice(0, 10)
+        : null,
       source: "openfoodfacts" as const,
       is_approved: true,
       submitted_by_user_id: null,
