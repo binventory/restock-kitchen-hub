@@ -20,6 +20,16 @@ import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CookRouteImport } from './routes/cook'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminUsersRouteImport } from './routes/admin/users'
+import { Route as AdminShopRouteImport } from './routes/admin/shop'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminQueueRouteImport } from './routes/admin/queue'
+import { Route as AdminPopupsRouteImport } from './routes/admin/popups'
+import { Route as AdminPlansRouteImport } from './routes/admin/plans'
+import { Route as AdminOffersRouteImport } from './routes/admin/offers'
+import { Route as AdminAuditRouteImport } from './routes/admin/audit'
+import { Route as AdminAdsRouteImport } from './routes/admin/ads'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -77,10 +87,60 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminShopRoute = AdminShopRouteImport.update({
+  id: '/shop',
+  path: '/shop',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminQueueRoute = AdminQueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPopupsRoute = AdminPopupsRouteImport.update({
+  id: '/popups',
+  path: '/popups',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPlansRoute = AdminPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOffersRoute = AdminOffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAuditRoute = AdminAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdsRoute = AdminAdsRouteImport.update({
+  id: '/ads',
+  path: '/ads',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/cook': typeof CookRoute
   '/cookies': typeof CookiesRoute
   '/impressum': typeof ImpressumRoute
@@ -90,10 +150,19 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/terms': typeof TermsRoute
+  '/admin/ads': typeof AdminAdsRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/offers': typeof AdminOffersRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/popups': typeof AdminPopupsRoute
+  '/admin/queue': typeof AdminQueueRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/shop': typeof AdminShopRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/cook': typeof CookRoute
   '/cookies': typeof CookiesRoute
   '/impressum': typeof ImpressumRoute
@@ -103,11 +172,21 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/terms': typeof TermsRoute
+  '/admin/ads': typeof AdminAdsRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/offers': typeof AdminOffersRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/popups': typeof AdminPopupsRoute
+  '/admin/queue': typeof AdminQueueRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/shop': typeof AdminShopRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
+  '/admin': typeof AdminRouteWithChildren
   '/cook': typeof CookRoute
   '/cookies': typeof CookiesRoute
   '/impressum': typeof ImpressumRoute
@@ -117,6 +196,16 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/terms': typeof TermsRoute
+  '/admin/ads': typeof AdminAdsRoute
+  '/admin/audit': typeof AdminAuditRoute
+  '/admin/offers': typeof AdminOffersRoute
+  '/admin/plans': typeof AdminPlansRoute
+  '/admin/popups': typeof AdminPopupsRoute
+  '/admin/queue': typeof AdminQueueRoute
+  '/admin/settings': typeof AdminSettingsRoute
+  '/admin/shop': typeof AdminShopRoute
+  '/admin/users': typeof AdminUsersRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -132,10 +221,19 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/terms'
+    | '/admin/ads'
+    | '/admin/audit'
+    | '/admin/offers'
+    | '/admin/plans'
+    | '/admin/popups'
+    | '/admin/queue'
+    | '/admin/settings'
+    | '/admin/shop'
+    | '/admin/users'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/cook'
     | '/cookies'
     | '/impressum'
@@ -145,6 +243,16 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/terms'
+    | '/admin/ads'
+    | '/admin/audit'
+    | '/admin/offers'
+    | '/admin/plans'
+    | '/admin/popups'
+    | '/admin/queue'
+    | '/admin/settings'
+    | '/admin/shop'
+    | '/admin/users'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -158,11 +266,21 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/terms'
+    | '/admin/ads'
+    | '/admin/audit'
+    | '/admin/offers'
+    | '/admin/plans'
+    | '/admin/popups'
+    | '/admin/queue'
+    | '/admin/settings'
+    | '/admin/shop'
+    | '/admin/users'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
+  AdminRoute: typeof AdminRouteWithChildren
   CookRoute: typeof CookRoute
   CookiesRoute: typeof CookiesRoute
   ImpressumRoute: typeof ImpressumRoute
@@ -253,12 +371,110 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/shop': {
+      id: '/admin/shop'
+      path: '/shop'
+      fullPath: '/admin/shop'
+      preLoaderRoute: typeof AdminShopRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/queue': {
+      id: '/admin/queue'
+      path: '/queue'
+      fullPath: '/admin/queue'
+      preLoaderRoute: typeof AdminQueueRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/popups': {
+      id: '/admin/popups'
+      path: '/popups'
+      fullPath: '/admin/popups'
+      preLoaderRoute: typeof AdminPopupsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/plans': {
+      id: '/admin/plans'
+      path: '/plans'
+      fullPath: '/admin/plans'
+      preLoaderRoute: typeof AdminPlansRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/offers': {
+      id: '/admin/offers'
+      path: '/offers'
+      fullPath: '/admin/offers'
+      preLoaderRoute: typeof AdminOffersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/audit': {
+      id: '/admin/audit'
+      path: '/audit'
+      fullPath: '/admin/audit'
+      preLoaderRoute: typeof AdminAuditRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ads': {
+      id: '/admin/ads'
+      path: '/ads'
+      fullPath: '/admin/ads'
+      preLoaderRoute: typeof AdminAdsRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminAdsRoute: typeof AdminAdsRoute
+  AdminAuditRoute: typeof AdminAuditRoute
+  AdminOffersRoute: typeof AdminOffersRoute
+  AdminPlansRoute: typeof AdminPlansRoute
+  AdminPopupsRoute: typeof AdminPopupsRoute
+  AdminQueueRoute: typeof AdminQueueRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminShopRoute: typeof AdminShopRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdsRoute: AdminAdsRoute,
+  AdminAuditRoute: AdminAuditRoute,
+  AdminOffersRoute: AdminOffersRoute,
+  AdminPlansRoute: AdminPlansRoute,
+  AdminPopupsRoute: AdminPopupsRoute,
+  AdminQueueRoute: AdminQueueRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
+  AdminShopRoute: AdminShopRoute,
+  AdminUsersRoute: AdminUsersRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
+  AdminRoute: AdminRouteWithChildren,
   CookRoute: CookRoute,
   CookiesRoute: CookiesRoute,
   ImpressumRoute: ImpressumRoute,

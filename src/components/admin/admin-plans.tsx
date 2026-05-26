@@ -36,7 +36,7 @@ export function AdminPlans() {
   const save = async (id: string) => {
     const patch = edits[id];
     if (!patch) return;
-    const { error } = await supabase.from("plans").update(patch).eq("id", id);
+    const { error } = await supabase.from("plans").update(patch as never).eq("id", id);
     if (error) { toast.error(error.message); return; }
     await supabase.rpc("log_admin_action", {
       _action: "update_plan",
