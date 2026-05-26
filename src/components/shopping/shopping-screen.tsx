@@ -24,6 +24,31 @@ import type { ResolvedProduct } from "@/lib/types/product";
 
 const cacheKey = (hid: string) => `restock_shopping_${hid}`;
 
+const SECTION_ICON: Record<string, string> = {
+  Drinks: "🥤",
+  Dairy: "🥛",
+  Fruits: "🍎",
+  Vegetables: "🥦",
+  Bakery: "🍞",
+  Snacks: "🍬",
+  Frozen: "❄️",
+  Food: "🍽️",
+  Condiments: "🧂",
+  Other: "📦",
+};
+
+function groupBySection(items: ShoppingItem[]): Array<[string, ShoppingItem[]]> {
+  const groups = new Map<string, ShoppingItem[]>();
+  for (const it of items) {
+    const key =
+      (it.product as { section_name?: string | null } | null)?.section_name ?? "Other";
+    const bucket = groups.get(key) ?? [];
+    bucket.push(it);
+    groups.set(key, bucket);
+  }
+  return Array.from(groups.entries());
+}
+
 export function ShoppingScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -173,16 +198,29 @@ export function ShoppingScreen() {
         {toBuy.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("shopping.empty")}</p>
         ) : (
-          <div className="space-y-2">
-            {toBuy.map((i) => (
-              <ShoppingItemCard
-                key={i.id}
-                item={i}
-                onCheck={onCheck}
-                onDelete={onDelete}
-                onSelect={setSelectedProduct}
-                onChangeNeeded={onChangeNeeded}
-              />
+          <div className="space-y-3">
+            {groupBySection(toBuy).map(([sectionName, list]) => (
+              <div key={sectionName} className="rounded-xl border bg-card/50">
+                <div className="flex items-center gap-2 px-3 py-2 text-sm font-semibold bg-muted/30 rounded-t-xl">
+                  <span className="text-base">{SECTION_ICON[sectionName] ?? "📦"}</span>
+                  <span className="flex-1">{sectionName}</span>
+                  <span className="text-xs font-medium rounded-full bg-background border px-2 py-0.5 text-muted-foreground">
+                    {list.length}
+                  </span>
+                </div>
+                <div className="p-2 space-y-2 border-t">
+                  {list.map((i) => (
+                    <ShoppingItemCard
+                      key={i.id}
+                      item={i}
+                      onCheck={onCheck}
+                      onDelete={onDelete}
+                      onSelect={setSelectedProduct}
+                      onChangeNeeded={onChangeNeeded}
+                    />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         )}
