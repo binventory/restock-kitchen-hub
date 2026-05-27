@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+
+const isDevEnv =
+  import.meta.env.DEV ||
+  (typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"));
 
 export function AuthScreen() {
   const { t } = useTranslation();
