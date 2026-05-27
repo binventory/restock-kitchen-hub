@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
+
+const isDevEnv =
+  import.meta.env.DEV ||
+  (typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1"));
 
 export function AuthScreen() {
   const { t } = useTranslation();
@@ -54,6 +61,49 @@ export function AuthScreen() {
           >
             {busy === "apple" ? "..." : t("auth.continueApple")}
           </button>
+          {isDevEnv && (
+            <button
+              disabled={busy !== null}
+              onClick={async () => {
+                setBusy("dev");
+                setError(null);
+                try {
+                  const email =
+                    import.meta.env.VITE_DEV_TEST_EMAIL ?? "dev@restock.local";
+                  const password =
+                    import.meta.env.VITE_DEV_TEST_PASSWORD ?? "dev-password-123!";
+                  let { error: err } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                  });
+                  if (err) {
+                    // Try to create the test user on first run
+                    const { error: signUpErr } = await supabase.auth.signUp({
+                      email,
+                      password,
+                    });
+                    if (signUpErr) throw signUpErr;
+                    ({ error: err } = await supabase.auth.signInWithPassword({
+                      email,
+                      password,
+                    }));
+                    if (err) throw err;
+                  }
+                } catch (e) {
+                  console.error("[dev fast login]", e);
+                  setError(
+                    "Dev login failed. Ensure email auth is enabled and the test user exists.",
+                  );
+                } finally {
+                  setBusy(null);
+                }
+              }}
+              className="w-full rounded-lg border border-dashed border-amber-500/60 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-700 hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-300"
+              data-testid="dev-fast-login"
+            >
+              {busy === "dev" ? "..." : "🧪 Dev Fast Login (local only)"}
+            </button>
+          )}
         </div>
         {error && (
           <p className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">
