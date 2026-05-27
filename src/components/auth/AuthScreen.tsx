@@ -68,31 +68,12 @@ export function AuthScreen() {
                 setBusy("dev");
                 setError(null);
                 try {
-                  const email =
-                    import.meta.env.VITE_DEV_TEST_EMAIL ?? "dev@restock.local";
-                  const password =
-                    import.meta.env.VITE_DEV_TEST_PASSWORD ?? "dev-password-123!";
-                  let { error: err } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                  });
-                  if (err) {
-                    // Try to create the test user on first run
-                    const { error: signUpErr } = await supabase.auth.signUp({
-                      email,
-                      password,
-                    });
-                    if (signUpErr) throw signUpErr;
-                    ({ error: err } = await supabase.auth.signInWithPassword({
-                      email,
-                      password,
-                    }));
-                    if (err) throw err;
-                  }
+                  const { error: err } = await supabase.auth.signInAnonymously();
+                  if (err) throw err;
                 } catch (e) {
                   console.error("[dev fast login]", e);
                   setError(
-                    "Dev login failed. Ensure email auth is enabled and the test user exists.",
+                    "Dev login failed. Anonymous sign-in may be disabled on the backend.",
                   );
                 } finally {
                   setBusy(null);
