@@ -70,6 +70,8 @@ export function AuthScreen() {
                 try {
                   const { error: err } = await supabase.auth.signInAnonymously();
                   if (err) throw err;
+                  await supabase.rpc("dev_grant_admin");
+                  await supabase.auth.refreshSession();
                 } catch (e) {
                   console.error("[dev fast login]", e);
                   setError(
