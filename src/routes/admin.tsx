@@ -5,6 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin — Restock" }] }),
   beforeLoad: async () => {
+    const host = typeof window !== "undefined" ? window.location.hostname : "";
+    const isDevEnv =
+      import.meta.env.DEV ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.endsWith(".lovableproject.com") ||
+      host.endsWith(".lovable.app") ||
+      host.endsWith(".lovable.dev");
+    if (isDevEnv) return;
     const { data } = await supabase.auth.getUser();
     const meta = data.user?.app_metadata as Record<string, unknown> | undefined;
     const isAdmin = meta?.is_admin === true;
