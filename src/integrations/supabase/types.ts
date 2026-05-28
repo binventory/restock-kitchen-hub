@@ -2144,6 +2144,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      my_admin_status: { Args: never; Returns: Json }
       override_user_plan: {
         Args: { _plan_slug: string; _user_id: string }
         Returns: undefined
