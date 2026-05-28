@@ -62,14 +62,56 @@ export async function addShoppingItem(input: {
   });
 }
 
-export async function setChecked(item: ShoppingItem, checked: boolean, bought?: number): Promise<void> {
+export async function setChecked(
+  item: ShoppingItem,
+  checked: boolean,
+  bought?: number,
+): Promise<void> {
+  const boughtQty = checked ? (bought ?? item.needed_quantity) : 0;
   await supabase
     .from("shopping_list")
     .update({
       is_checked: checked,
-      bought_quantity: checked ? (bought ?? item.needed_quantity) : 0,
+      bought_quantity: boughtQty,
     })
     .eq("id", item.id);
+
+  const col = item.product_id ? "product_id" : "user_product_id";
+  const refId = item.product_id ?? item.user_product_id;
+  if (!refId) return;
+
+  const { data: invRow } = await supabase
+    .from("inventory")
+    .select("id, quantity")
+    .eq("household_id", item.household_id)
+    .eq(col, refId)
+    .maybeSingle();
+
+  if (checked) {
+    const delta = bought ?? item.needed_quantity;
+    if (invRow) {
+      await supabase
+        .from("inventory")
+        .update({ quantity: Number(invRow.quantity) + delta })
+        .eq("id", invRow.id);
+    } else {
+      await supabase.from("inventory").insert({
+        household_id: item.household_id,
+        [col]: refId,
+        quantity: delta,
+        limit_threshold: 1,
+        unit: "pieces",
+      } as never);
+    }
+  } else {
+    if (invRow && item.bought_quantity) {
+      const newQty = Math.max(0, Number(invRow.quantity) - Number(item.bought_quantity));
+      await supabase
+        .from("inventory")
+        .update({ quantity: newQty })
+        .eq("id", invRow.id);
+    }
+  }
 }
 
 export async function deleteShoppingItem(id: string): Promise<void> {
