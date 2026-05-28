@@ -2112,6 +2112,7 @@ export type Database = {
       create_household: { Args: { _name: string }; Returns: string }
       decline_user_product: { Args: { _id: string }; Returns: undefined }
       delete_my_account: { Args: never; Returns: undefined }
+      dev_grant_admin: { Args: never; Returns: undefined }
       get_admin_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["admin_role"]
