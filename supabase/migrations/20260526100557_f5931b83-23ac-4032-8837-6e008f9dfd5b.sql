@@ -44,91 +44,10 @@ CREATE POLICY "admins read all popups" ON public.popup_notifications
 -- A4) SECURITY DEFINER ingest function, replaces OFF insert policy
 DROP POLICY IF EXISTS "openfoodfacts insert" ON public.products;
 
-CREATE OR REPLACE FUNCTION public.ingest_off_product(_payload jsonb)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  _barcode text;
-  _id uuid;
-  _existing uuid;
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'Not authenticated';
-  END IF;
-
-  _barcode := _payload->>'barcode';
-  IF _barcode IS NULL OR length(_barcode) < 4 THEN
-    RAISE EXCEPTION 'Invalid barcode';
-  END IF;
-
-  SELECT id INTO _existing
-  FROM public.products
-  WHERE barcode = _barcode AND is_approved = true
-  LIMIT 1;
-  IF _existing IS NOT NULL THEN
-    RETURN _existing;
-  END IF;
-
-  INSERT INTO public.products (
-    barcode, name, brand, generic_name, category, food_group,
-    image_url, quantity_value, quantity_unit, calories_100g,
-    fat_100g, saturated_fat_100g, carbohydrates_100g, sugars_100g,
-    proteins_100g, salt_100g, fiber_100g, serving_size_g,
-    calories_serving, nutriscore, ecoscore, nova_group,
-    nutrient_levels, allergens, traces_allergens, labels,
-    is_vegan, is_vegetarian, is_gluten_free, has_palm_oil,
-    halal_certified, ingredients_text, ingredients_analysis,
-    available_stores, source, is_approved, submitted_by_user_id
-  )
-  VALUES (
-    _barcode,
-    _payload->>'name',
-    _payload->>'brand',
-    _payload->>'generic_name',
-    _payload->>'category',
-    _payload->>'food_group',
-    _payload->>'image_url',
-    (_payload->>'quantity_value')::numeric,
-    _payload->>'quantity_unit',
-    (_payload->>'calories_100g')::numeric,
-    (_payload->>'fat_100g')::numeric,
-    (_payload->>'saturated_fat_100g')::numeric,
-    (_payload->>'carbohydrates_100g')::numeric,
-    (_payload->>'sugars_100g')::numeric,
-    (_payload->>'proteins_100g')::numeric,
-    (_payload->>'salt_100g')::numeric,
-    (_payload->>'fiber_100g')::numeric,
-    (_payload->>'serving_size_g')::numeric,
-    (_payload->>'calories_serving')::numeric,
-    (_payload->>'nutriscore')::nutri_grade,
-    (_payload->>'ecoscore')::nutri_grade,
-    (_payload->>'nova_group')::integer,
-    (_payload->'nutrient_levels')::jsonb,
-    ARRAY(SELECT jsonb_array_elements_text(COALESCE(_payload->'allergens', '[]'::jsonb))),
-    ARRAY(SELECT jsonb_array_elements_text(COALESCE(_payload->'traces_allergens', '[]'::jsonb))),
-    ARRAY(SELECT jsonb_array_elements_text(COALESCE(_payload->'labels', '[]'::jsonb))),
-    (_payload->>'is_vegan')::boolean,
-    (_payload->>'is_vegetarian')::boolean,
-    (_payload->>'is_gluten_free')::boolean,
-    (_payload->>'has_palm_oil')::boolean,
-    (_payload->>'halal_certified')::boolean,
-    _payload->>'ingredients_text',
-    ARRAY(SELECT jsonb_array_elements_text(COALESCE(_payload->'ingredients_analysis', '[]'::jsonb))),
-    ARRAY(SELECT jsonb_array_elements_text(COALESCE(_payload->'available_stores', '[]'::jsonb))),
-    'openfoodfacts',
-    true,
-    NULL
-  )
-  RETURNING id INTO _id;
-
-  RETURN _id;
-END;
-$$;
-
-REVOKE EXECUTE ON FUNCTION public.ingest_off_product(jsonb)
-  FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.ingest_off_product(jsonb)
-  TO authenticated;
+-- ============================================================
+-- ingest_off_product RPC was REMOVED.
+-- OpenFoodFacts ingestion happens server-side only via the
+-- TanStack server function ingestOpenFoodFactsProduct, which
+-- uses the service role and validates input. Clients never
+-- insert into the global products table directly.
+-- ============================================================
