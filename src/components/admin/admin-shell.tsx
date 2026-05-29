@@ -32,9 +32,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
         import.meta.env.DEV ||
         host === "localhost" ||
         host === "127.0.0.1" ||
-        host.endsWith(".lovableproject.com") ||
-        host.endsWith(".lovable.app") ||
-        host.endsWith(".lovable.dev");
+        host.endsWith(".lovableproject.com"); // preview only
       const { data, error } = await supabase.rpc("my_admin_status");
       if (error) {
         console.error("[AdminShell] my_admin_status error:", error);
