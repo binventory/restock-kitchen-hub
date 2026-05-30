@@ -27,26 +27,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void (async () => {
-      const host = typeof window !== "undefined" ? window.location.hostname : "";
-      const isDevEnv =
-        import.meta.env.DEV ||
-        host === "localhost" ||
-        host === "127.0.0.1" ||
-        host.endsWith(".lovableproject.com"); // preview only
-      const { data, error } = await supabase.rpc("my_admin_status");
-      if (error) {
-        console.error("[AdminShell] my_admin_status error:", error);
-      }
-      const status = (data ?? {}) as { is_admin?: boolean; role?: string | null };
-      if (status.is_admin === true) {
-        setRole("super_admin");
-      } else if (status.role === "moderator") {
-        setRole("moderator");
-      } else if (isDevEnv) {
-        setRole("super_admin");
-      } else {
-        router.navigate({ to: "/" });
-      }
+      const { data } = await supabase.auth.getUser();
+      const m = data.user?.app_metadata as Record<string, unknown> | undefined;
+      if (m?.is_admin === true) setRole("super_admin");
+      else if (m?.role === "moderator") setRole("moderator");
+      else router.navigate({ to: "/" });
     })();
   }, [router]);
 

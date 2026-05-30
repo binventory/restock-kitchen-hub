@@ -1,13 +1,6 @@
 import { useState } from "react";
 import { lovable } from "@/integrations/lovable";
-import { supabase } from "@/integrations/supabase/client";
 import { useTranslation } from "react-i18next";
-
-const isDevEnv =
-  import.meta.env.DEV ||
-  (typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1"));
 
 export function AuthScreen() {
   const { t } = useTranslation();
@@ -61,32 +54,6 @@ export function AuthScreen() {
           >
             {busy === "apple" ? "..." : t("auth.continueApple")}
           </button>
-          {isDevEnv && (
-            <button
-              disabled={busy !== null}
-              onClick={async () => {
-                setBusy("dev");
-                setError(null);
-                try {
-                  const { error: err } = await supabase.auth.signInAnonymously();
-                  if (err) throw err;
-                  await supabase.rpc("dev_grant_admin");
-                  await supabase.auth.refreshSession();
-                } catch (e) {
-                  console.error("[dev fast login]", e);
-                  setError(
-                    "Dev login failed. Anonymous sign-in may be disabled on the backend.",
-                  );
-                } finally {
-                  setBusy(null);
-                }
-              }}
-              className="w-full rounded-lg border border-dashed border-amber-500/60 bg-amber-500/10 px-4 py-2.5 text-sm font-medium text-amber-700 hover:bg-amber-500/20 disabled:opacity-50 dark:text-amber-300"
-              data-testid="dev-fast-login"
-            >
-              {busy === "dev" ? "..." : "🧪 Dev Fast Login (local only)"}
-            </button>
-          )}
         </div>
         {error && (
           <p className="mt-4 rounded-md border border-destructive/50 bg-destructive/10 px-3 py-2 text-sm text-destructive">

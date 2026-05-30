@@ -261,13 +261,12 @@ CREATE POLICY "members read prices" ON public.user_prices FOR SELECT TO authenti
 CREATE POLICY "own prices write" ON public.user_prices FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
 
 -- offers / ads (read active)
--- "read active offers" policy is defined in a later migration
--- with column-level grants that hide sensitive columns.
-CREATE POLICY "insert offer view" ON public.offer_views FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-CREATE POLICY "insert offer click" ON public.offer_clicks FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+CREATE POLICY "read active offers" ON public.offers FOR SELECT TO authenticated USING (is_active);
+CREATE POLICY "insert offer view" ON public.offer_views FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() OR user_id IS NULL);
+CREATE POLICY "insert offer click" ON public.offer_clicks FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() OR user_id IS NULL);
 CREATE POLICY "read active ads" ON public.ads FOR SELECT TO authenticated USING (is_active);
-CREATE POLICY "insert ad impression" ON public.ad_impressions FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
-CREATE POLICY "insert ad click" ON public.ad_clicks FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+CREATE POLICY "insert ad impression" ON public.ad_impressions FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() OR user_id IS NULL);
+CREATE POLICY "insert ad click" ON public.ad_clicks FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid() OR user_id IS NULL);
 
 -- popups
 CREATE POLICY "read active popups" ON public.popup_notifications FOR SELECT TO authenticated USING (is_active);
@@ -314,7 +313,7 @@ CREATE POLICY "auth write own product images" ON storage.objects FOR INSERT TO a
 CREATE POLICY "auth own shopping photos" ON storage.objects FOR ALL TO authenticated
   USING (bucket_id='shopping-photos' AND (storage.foldername(name))[1] = auth.uid()::text)
   WITH CHECK (bucket_id='shopping-photos' AND (storage.foldername(name))[1] = auth.uid()::text);
--- scanner-images read is restricted to authenticated household
--- owners via policies in a later migration. No public read.
+CREATE POLICY "public read scanner images" ON storage.objects FOR SELECT TO public
+  USING (bucket_id='scanner-images');
 CREATE POLICY "auth read own exports" ON storage.objects FOR SELECT TO authenticated
   USING (bucket_id='data-exports' AND (storage.foldername(name))[1] = auth.uid()::text);

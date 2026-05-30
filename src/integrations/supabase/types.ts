@@ -1970,13 +1970,11 @@ export type Database = {
       offers_public: {
         Row: {
           clicks_count: number | null
-          created_at: string | null
           description: string | null
           discount_value: number | null
           ends_at: string | null
           id: string | null
           image_url: string | null
-          is_active: boolean | null
           max_clicks: number | null
           max_views: number | null
           offer_type: string | null
@@ -1991,13 +1989,11 @@ export type Database = {
         }
         Insert: {
           clicks_count?: number | null
-          created_at?: string | null
           description?: string | null
           discount_value?: number | null
           ends_at?: string | null
           id?: string | null
           image_url?: string | null
-          is_active?: boolean | null
           max_clicks?: number | null
           max_views?: number | null
           offer_type?: string | null
@@ -2012,13 +2008,11 @@ export type Database = {
         }
         Update: {
           clicks_count?: number | null
-          created_at?: string | null
           description?: string | null
           discount_value?: number | null
           ends_at?: string | null
           id?: string | null
           image_url?: string | null
-          is_active?: boolean | null
           max_clicks?: number | null
           max_views?: number | null
           offer_type?: string | null
@@ -2118,7 +2112,6 @@ export type Database = {
       create_household: { Args: { _name: string }; Returns: string }
       decline_user_product: { Args: { _id: string }; Returns: undefined }
       delete_my_account: { Args: never; Returns: undefined }
-      dev_grant_admin: { Args: never; Returns: undefined }
       get_admin_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["admin_role"]
@@ -2150,7 +2143,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      my_admin_status: { Args: never; Returns: Json }
       override_user_plan: {
         Args: { _plan_slug: string; _user_id: string }
         Returns: undefined
