@@ -2084,7 +2084,6 @@ export type Database = {
       }
       popup_notifications_public: {
         Row: {
-          coupon_id: string | null
           ends_at: string | null
           id: string | null
           is_active: boolean | null
@@ -2096,7 +2095,6 @@ export type Database = {
           type: string | null
         }
         Insert: {
-          coupon_id?: string | null
           ends_at?: string | null
           id?: string | null
           is_active?: boolean | null
@@ -2108,7 +2106,6 @@ export type Database = {
           type?: string | null
         }
         Update: {
-          coupon_id?: string | null
           ends_at?: string | null
           id?: string | null
           is_active?: boolean | null
@@ -2119,22 +2116,7 @@ export type Database = {
           title?: string | null
           type?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "popup_notifications_coupon_id_fkey"
-            columns: ["coupon_id"]
-            isOneToOne: false
-            referencedRelation: "coupons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "popup_notifications_coupon_id_fkey"
-            columns: ["coupon_id"]
-            isOneToOne: false
-            referencedRelation: "coupons_public"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
