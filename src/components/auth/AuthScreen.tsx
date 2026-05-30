@@ -70,8 +70,8 @@ export function AuthScreen() {
                 try {
                   const { error: err } = await supabase.auth.signInAnonymously();
                   if (err) throw err;
-                  await supabase.rpc("dev_grant_admin");
-                  await supabase.auth.refreshSession();
+                  // Note: anonymous dev users are NOT admins. Admin testing uses
+                  // the localhost route-guard bypass or a real admin account.
                 } catch (e) {
                   console.error("[dev fast login]", e);
                   setError(

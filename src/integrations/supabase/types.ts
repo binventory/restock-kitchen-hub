@@ -639,6 +639,42 @@ export type Database = {
           },
         ]
       }
+      offer_private: {
+        Row: {
+          coupon_code: string | null
+          offer_id: string
+          sponsor_name: string | null
+          sponsor_paid_eur: number | null
+        }
+        Insert: {
+          coupon_code?: string | null
+          offer_id: string
+          sponsor_name?: string | null
+          sponsor_paid_eur?: number | null
+        }
+        Update: {
+          coupon_code?: string | null
+          offer_id?: string
+          sponsor_name?: string | null
+          sponsor_paid_eur?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_private_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: true
+            referencedRelation: "offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offer_private_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: true
+            referencedRelation: "offers_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offer_views: {
         Row: {
           id: string
@@ -678,7 +714,6 @@ export type Database = {
       offers: {
         Row: {
           clicks_count: number
-          coupon_code: string | null
           created_at: string
           description: string | null
           discount_value: number | null
@@ -692,8 +727,6 @@ export type Database = {
           product_group_id: string | null
           product_id: string | null
           section_id: string | null
-          sponsor_name: string | null
-          sponsor_paid_eur: number | null
           starts_at: string | null
           supermarket: string | null
           target_plans: string[] | null
@@ -702,7 +735,6 @@ export type Database = {
         }
         Insert: {
           clicks_count?: number
-          coupon_code?: string | null
           created_at?: string
           description?: string | null
           discount_value?: number | null
@@ -716,8 +748,6 @@ export type Database = {
           product_group_id?: string | null
           product_id?: string | null
           section_id?: string | null
-          sponsor_name?: string | null
-          sponsor_paid_eur?: number | null
           starts_at?: string | null
           supermarket?: string | null
           target_plans?: string[] | null
@@ -726,7 +756,6 @@ export type Database = {
         }
         Update: {
           clicks_count?: number
-          coupon_code?: string | null
           created_at?: string
           description?: string | null
           discount_value?: number | null
@@ -740,8 +769,6 @@ export type Database = {
           product_group_id?: string | null
           product_id?: string | null
           section_id?: string | null
-          sponsor_name?: string | null
-          sponsor_paid_eur?: number | null
           starts_at?: string | null
           supermarket?: string | null
           target_plans?: string[] | null
@@ -2118,7 +2145,6 @@ export type Database = {
       create_household: { Args: { _name: string }; Returns: string }
       decline_user_product: { Args: { _id: string }; Returns: undefined }
       delete_my_account: { Args: never; Returns: undefined }
-      dev_grant_admin: { Args: never; Returns: undefined }
       get_admin_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["admin_role"]
