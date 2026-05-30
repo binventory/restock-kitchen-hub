@@ -1970,11 +1970,13 @@ export type Database = {
       offers_public: {
         Row: {
           clicks_count: number | null
+          created_at: string | null
           description: string | null
           discount_value: number | null
           ends_at: string | null
           id: string | null
           image_url: string | null
+          is_active: boolean | null
           max_clicks: number | null
           max_views: number | null
           offer_type: string | null
@@ -1989,11 +1991,13 @@ export type Database = {
         }
         Insert: {
           clicks_count?: number | null
+          created_at?: string | null
           description?: string | null
           discount_value?: number | null
           ends_at?: string | null
           id?: string | null
           image_url?: string | null
+          is_active?: boolean | null
           max_clicks?: number | null
           max_views?: number | null
           offer_type?: string | null
@@ -2008,11 +2012,13 @@ export type Database = {
         }
         Update: {
           clicks_count?: number | null
+          created_at?: string | null
           description?: string | null
           discount_value?: number | null
           ends_at?: string | null
           id?: string | null
           image_url?: string | null
+          is_active?: boolean | null
           max_clicks?: number | null
           max_views?: number | null
           offer_type?: string | null

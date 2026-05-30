@@ -21,10 +21,7 @@ GRANT SELECT (
   is_active, created_at
 ) ON public.offers TO authenticated;
 
-DROP POLICY IF EXISTS "read active offers safe" ON public.offers;
-CREATE POLICY "read active offers safe" ON public.offers
-  FOR SELECT TO authenticated
-  USING (is_active = true);
+-- "read active offers safe" policy removed; reads go through public.offers_public view
 
 DROP POLICY IF EXISTS "admins read all offers" ON public.offers;
 CREATE POLICY "admins read all offers" ON public.offers
